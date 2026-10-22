@@ -4,7 +4,7 @@ import type { Rules } from '../data/rules'
 import type { Basis, Equipment, Exercise, ExerciseLog, ProposalDraft, QuestionDraft, Slot, WarningDraft, WorkoutSession } from './types'
 
 // 운동 진행 규칙 (ACSM 2009 + 결정 D1·D2)
-// - 2회 연속 세션에서 모든 세트가 목표 +1회 이상 → 목표를 반복 범위 상한까지 (요청서 규칙)
+// - 2회 연속 세션에서 모든 세트가 목표 +1회 이상 → 다음 목표 = 최근 세션의 가장 적게 한 세트 횟수 (상한까지, 사용자 결정)
 // - 상한에서도 2회 연속 +1회 이상 → 사다리 다음 종목 (맨몸에서 '부하 증가'를 더 어려운 변형으로 적용)
 // - 2회 연속 미달 → 유지, 3회 연속 미달 → 한 단계 내림 (사용자 결정값)
 // - 관절·찌르는 통증 / 위험 신호 → 한 단계 내림 + 전문의 안내
@@ -126,13 +126,21 @@ export function decideSlot(slot: Slot, sessions: WorkoutSession[], equipment: Eq
 
     const progressBasis: Basis = ev('acsm2009#progression')
     if (slot.target < ex.range.max) {
+      const minSet = Math.min(...latest.sets.map((s) => s.value))
+      const to = rules.strength.nextTargetFromMinSet.value ? Math.min(ex.range.max, minSet) : ex.range.max
       return {
         proposal: {
           key: `slot:${slot.pattern}`,
-          title: `${ex.name}: 목표 ${slot.target}회 → ${ex.range.max}회`,
-          patch: { op: 'slot.set', pattern: slot.pattern, from: slot, to: { ...slot, target: ex.range.max } },
-          why: { summary: `${n}회 연속 모든 세트에서 목표보다 ${overBy}회 이상 더 했습니다. 요청서 규칙대로 반복 범위 상한(${ex.range.max}회)까지 올립니다.`, data: recentData },
-          basis: [progressBasis, ex.rangeBasis, userDecision('요청서 규칙: 목표를 넘기면 다음 목표는 반복 범위 상한까지')],
+          title: `${ex.name}: 목표 ${slot.target}회 → ${to}회`,
+          patch: { op: 'slot.set', pattern: slot.pattern, from: slot, to: { ...slot, target: to } },
+          why: {
+            summary:
+              to < ex.range.max
+                ? `${n}회 연속 모든 세트에서 목표보다 ${overBy}회 이상 더 했습니다. 최근 세션에서 가장 적게 한 세트(${minSet}회)를 다음 목표로 합니다.`
+                : `${n}회 연속 모든 세트에서 목표보다 ${overBy}회 이상 더 했습니다. 반복 범위 상한(${ex.range.max}회)을 목표로 합니다.`,
+            data: recentData,
+          },
+          basis: [progressBasis, ex.rangeBasis, rules.strength.nextTargetFromMinSet.basis],
         },
       }
     }

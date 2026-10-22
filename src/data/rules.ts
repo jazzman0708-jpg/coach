@@ -19,6 +19,7 @@ export const RULES = {
     noviceDaysPerWeek: p<[number, number]>([2, 3], ev('acsm2009#novice')),
     progressTrigger: p({ overBy: 1, consecutiveSessions: 2 }, ev('acsm2009#progression')),
     loadIncreasePct: p<[number, number]>([2, 10], ev('acsm2009#progression')),
+    nextTargetFromMinSet: p(true, userDecision('목표를 넘기면 다음 목표는 이번 세션에서 가장 적게 한 세트 횟수 (상한까지)')),
     holdAfterMisses: p(2, userDecision('요청서 값: 2회 연속 목표 미달이면 같은 단계 유지 (결정 D2)')),
     regressAfterMisses: p(3, userDecision('요청서 값: 3회 연속 목표 미달이면 한 단계 내림 (결정 D2)')),
     holdIncreaseSec: p<number>(null, needs('시간 종목(매달리기·플랭크)에서 2회 연속 모든 세트가 목표 시간을 채우면, 다음 목표를 몇 초 늘릴까요?')),

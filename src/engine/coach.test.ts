@@ -48,10 +48,17 @@ describe('운동 진행 (ACSM 2009 + 결정 D1·D2)', () => {
     expect(r.proposal).toBeUndefined()
   })
 
-  it('2회 연속이면 목표를 반복 범위 상한(12회)까지 올린다', () => {
-    const r = decideSlot(sink, [strength('2026-10-19', 'sink_pushup', 8, [9, 10, 9]), strength('2026-10-21', 'sink_pushup', 8, [10, 9, 9])], EQUIP, RULES)
-    expect(r.proposal?.patch).toMatchObject({ op: 'slot.set', to: { exerciseId: 'sink_pushup', target: 12 } })
+  it('2회 연속이면 다음 목표는 최근 세션에서 가장 적게 한 세트 횟수', () => {
+    const r = decideSlot(sink, [strength('2026-10-19', 'sink_pushup', 8, [9, 10, 9]), strength('2026-10-21', 'sink_pushup', 8, [11, 10, 10])], EQUIP, RULES)
+    expect(r.proposal?.patch).toMatchObject({ op: 'slot.set', to: { exerciseId: 'sink_pushup', target: 10 } })
     expect(r.proposal?.basis[0]).toMatchObject({ refs: ['acsm2009#progression'] })
+    expect(r.proposal?.basis[2]).toMatchObject({ type: 'user-decision' })
+  })
+
+  it('가장 적게 한 세트가 상한을 넘으면 상한(12회)까지만', () => {
+    const slot = { ...sink, target: 11 }
+    const r = decideSlot(slot, [strength('2026-10-19', 'sink_pushup', 11, [13, 13, 12]), strength('2026-10-21', 'sink_pushup', 11, [14, 13, 13])], EQUIP, RULES)
+    expect(r.proposal?.patch).toMatchObject({ to: { target: 12 } })
   })
 
   it('목표만 채운 경우(목표 +0)는 올리지 않는다', () => {
