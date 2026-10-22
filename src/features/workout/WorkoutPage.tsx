@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { type ReactNode, useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Why } from '../../components/Why'
 import { Badge, Button, Card, Field, Loading, NumberInput, Page, ProgressBar, Segmented, Sheet, Stepper } from '../../components/ui'
 import { CARDIO_BY_KIND, CARDIO_TYPES } from '../../data/drinks'
@@ -39,7 +39,14 @@ export default function WorkoutPage() {
   if (!active) {
     const recent = history.filter((s) => s.date >= addDays(today, -14))
     return (
-      <Page title="운동">
+      <Page
+        title="운동"
+        right={
+          <Link to="/timer" className="rounded-xl bg-soft px-3 py-1.5 text-sm font-semibold">
+            ◷ 타이머
+          </Link>
+        }
+      >
         <WorkoutStartCard settings={settings} program={program} today={today} sessions={recent} active={null} />
       </Page>
     )
@@ -325,12 +332,12 @@ function HoldPanel({
       fired.current.go = true
       alert(1)
     }
+    // 목표 시간에는 알리기만 하고 계속 센다 (더 버틴 기록이 다음 처방의 근거가 된다)
     if (elapsed >= target && !fired.current.done) {
       fired.current.done = true
       alert(2)
-      onLog(ex.prescribed.target)
     }
-  }, [elapsed, target, alert, onLog, ex.prescribed.target])
+  }, [elapsed, target, alert])
 
   return (
     <Card>
@@ -342,16 +349,21 @@ function HoldPanel({
             <p className="text-lg text-muted">준비</p>
             <p className="tabular text-8xl font-bold">{Math.ceil(-elapsed / 1000)}</p>
           </>
-        ) : (
+        ) : elapsed < target ? (
           <>
             <p className="text-lg text-muted">남은 시간</p>
-            <p className="tabular text-8xl font-bold">{Math.max(0, Math.ceil((target - elapsed) / 1000))}</p>
+            <p className="tabular text-8xl font-bold">{Math.ceil((target - elapsed) / 1000)}</p>
+          </>
+        ) : (
+          <>
+            <p className="text-lg font-semibold text-ok">목표 달성! 더 버틸 수 있으면 계속</p>
+            <p className="tabular text-8xl font-bold text-ok">+{Math.floor((elapsed - target) / 1000)}</p>
           </>
         )}
       </div>
       <div className="space-y-3">
         <Button variant="primary" size="xl" onClick={() => onLog(Math.max(0, Math.floor(elapsed / 1000)))} disabled={elapsed < 0}>
-          여기까지 (멈춤)
+          {elapsed >= target ? '끝 (기록하기)' : '여기까지 (멈춤)'}
         </Button>
         <Button variant="ghost" className="w-full" onClick={() => setUi(session, { phase: 'set', holdStartedAt: undefined })}>
           취소

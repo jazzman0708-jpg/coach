@@ -1,5 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
+import { RULES } from '../data/rules'
 import { logicalDate } from '../engine/day'
+import { withOverrides } from '../engine/program'
 import type { Settings } from '../engine/types'
 import { useNow } from '../lib/time'
 import { db } from './db'
@@ -26,3 +28,11 @@ export function useToday(settings: Settings | undefined) {
 export async function updateSettings(fn: (s: Settings) => void) {
   await db.settings.where('id').equals('singleton').modify(fn)
 }
+
+/** 사용자가 답한 결정값을 덮어쓴 규칙 */
+export function useRules() {
+  const overrides = useLiveQuery(() => db.ruleOverrides.toArray(), [])
+  return overrides ? withOverrides(RULES, overrides) : undefined
+}
+
+export const usePendingProposals = () => useLiveQuery(() => db.proposals.where('status').equals('pending').toArray(), [])

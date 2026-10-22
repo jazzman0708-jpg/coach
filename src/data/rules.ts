@@ -21,7 +21,8 @@ export const RULES = {
     loadIncreasePct: p<[number, number]>([2, 10], ev('acsm2009#progression')),
     holdAfterMisses: p(2, userDecision('요청서 값: 2회 연속 목표 미달이면 같은 단계 유지 (결정 D2)')),
     regressAfterMisses: p(3, userDecision('요청서 값: 3회 연속 목표 미달이면 한 단계 내림 (결정 D2)')),
-    holdIncreaseSec: p<number>(null, needs('시간 종목(매달리기·플랭크)은 목표를 달성하면 몇 초씩 늘릴까요?')),
+    holdIncreaseSec: p<number>(null, needs('시간 종목(매달리기·플랭크)에서 2회 연속 모든 세트가 목표 시간을 채우면, 다음 목표를 몇 초 늘릴까요?')),
+    holdAdvanceAtSec: p<number>(null, needs('시간 종목은 목표가 몇 초가 되면 사다리 다음 종목으로 넘어갈까요?')),
     restSec: p<[number, number]>([60, 120], ev('acsm2009#rest')),
     minRestHoursSameMuscle: p(48, ev('garber2011#rest48')),
     intermediateAfterMonths: p(6, ev('acsm2009#levels')),
@@ -61,6 +62,8 @@ export const RULES = {
     kcalIncrease: p(150, userDecision('주 1% 넘게 빠지면 하루 150 kcal 늘림 (결정 D7)')),
     kcalFloor: p(1500, evx('과체중·비만 대상 남성 저열량식 범위(1,200~1,500 kcal)의 상단을 "이 아래로는 제안하지 않는" 경계로 사용', 'nhlbi1998#lcd')),
     sleepSlowdownFactor: p(0.5, userDecision('수면 부족 경고가 뜨면 목표 감량 속도를 절반으로 (결정 D7)')),
+    minWeighInsPerWeek: p(3, userDecision('체중은 매일, 최소 주 3회 아침에 재고 주 평균끼리 비교 (결정 D6)')),
+    bothUpDecrease: p<number>(null, needs('체중과 허리둘레가 둘 다 늘었을 때 하루 몇 kcal 줄일까요? (0이면 그대로 둠)')),
     leanBulkSwitch: p<string>(null, needs('체지방 감량기에서 근육 증량기(린 벌크)로 언제 바꿀까요? 근거 있는 전환 기준이 없습니다.')),
   },
   protein: {

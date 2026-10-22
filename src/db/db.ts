@@ -1,6 +1,10 @@
 import Dexie, { type EntityTable } from 'dexie'
 import type {
   BodyLog,
+  ChangeProposal,
+  EvidenceQuestion,
+  ReviewRun,
+  RuleOverride,
   DrinkLog,
   MealLog,
   MonthlyMeasure,
@@ -14,7 +18,6 @@ import type {
 import { DEFAULT_SETTINGS, INITIAL_PROGRAM } from '../data/initialProgram'
 
 // 스키마를 바꿀 때는 version(n+1)을 추가하고 backup.ts의 SCHEMA_VERSION도 올린다.
-// 코치 화면(4단계)의 제안·경고·변경 이력 테이블은 version(2)에서 추가한다.
 export class CoachDB extends Dexie {
   settings!: EntityTable<Settings, 'id'>
   programVersions!: EntityTable<ProgramVersion, 'version'>
@@ -26,6 +29,10 @@ export class CoachDB extends Dexie {
   monthly!: EntityTable<MonthlyMeasure, 'id'>
   photos!: EntityTable<Photo, 'id'>
   pantry!: EntityTable<PantryItem, 'id'>
+  proposals!: EntityTable<ChangeProposal, 'id'>
+  questions!: EntityTable<EvidenceQuestion, 'id'>
+  ruleOverrides!: EntityTable<RuleOverride, 'key'>
+  reviews!: EntityTable<ReviewRun, 'weekOf'>
 
   constructor(name = 'coach') {
     super(name)
@@ -40,6 +47,13 @@ export class CoachDB extends Dexie {
       monthly: 'id, date',
       photos: 'id, date',
       pantry: 'id, name',
+    })
+    // 4단계: 코치 (변경 제안·질문·사용자 결정값·점검 기록)
+    this.version(2).stores({
+      proposals: 'id, weekOf, status, key',
+      questions: 'id, ruleKey, status',
+      ruleOverrides: 'key',
+      reviews: 'weekOf',
     })
     this.on('populate', (tx) => {
       tx.table('settings').add(DEFAULT_SETTINGS)
@@ -61,6 +75,10 @@ export const DATA_TABLES = [
   'bodyLogs',
   'monthly',
   'pantry',
+  'proposals',
+  'questions',
+  'ruleOverrides',
+  'reviews',
 ] as const
 
 export const newId = () => crypto.randomUUID()

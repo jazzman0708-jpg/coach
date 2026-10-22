@@ -351,3 +351,65 @@ export interface Settings {
   tableChecked?: boolean
   disclaimerAcceptedAt?: LocalDateTime
 }
+
+// ───────────────────────── 코치 (제안 → 승인) ─────────────────────────
+
+export type ProgramPatch =
+  /** 슬롯 추가·교체 (단계 올리기·내리기·목표 바꾸기·종목 추가) */
+  | { op: 'slot.set'; pattern: Pattern; from?: Slot; to: Slot }
+  | { op: 'cardio'; from: CardioRx; to: CardioRx }
+  | { op: 'nutrition'; field: 'kcal' | 'proteinG'; from: number; to: number }
+  /** 프로그램은 바뀌지 않고 장비 구입만 권한다 */
+  | { op: 'equipment.suggest'; equipment: Equipment[] }
+
+export interface ProposalDraft {
+  /** 같은 제안을 알아보는 키 (예: 'slot:vertical_pull') */
+  key: string
+  title: string
+  patch: ProgramPatch
+  why: Why
+  basis: Basis[]
+}
+
+export interface ChangeProposal extends ProposalDraft {
+  id: ID
+  weekOf: LocalDate
+  createdAt: LocalDateTime
+  status: 'pending' | 'approved' | 'rejected' | 'superseded'
+  decidedAt?: LocalDateTime
+  appliedVersion?: number
+}
+
+export interface WarningDraft {
+  key: string
+  level: 'info' | 'caution' | 'stop'
+  title: string
+  why: Why
+  basis: Basis[]
+}
+
+export interface QuestionDraft {
+  /** rules.ts의 'group.param' */
+  ruleKey: string
+  question: string
+  unit?: string
+}
+
+export interface EvidenceQuestion extends QuestionDraft {
+  id: ID
+  createdAt: LocalDateTime
+  status: 'open' | 'answered'
+}
+
+/** 근거 확인 필요 규칙에 사용자가 답한 값 */
+export interface RuleOverride {
+  key: string
+  value: number
+  decidedAt: LocalDate
+  note: string
+}
+
+export interface ReviewRun {
+  weekOf: LocalDate
+  ranAt: LocalDateTime
+}

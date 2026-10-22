@@ -7,7 +7,7 @@ import { DRINK_BY_ID } from '../../data/drinks'
 import { type Recipe, findRecipe } from '../../data/recipes'
 import { RULES } from '../../data/rules'
 import { db, newId } from '../../db/db'
-import { useActiveSession, useProgram, useSettings, useToday } from '../../db/hooks'
+import { useActiveSession, usePendingProposals, useProgram, useSettings, useToday } from '../../db/hooks'
 import { alcoholByDay, drinkingStatus } from '../../engine/alcohol'
 import { addDays, formatKoreanDate, timeOnLogicalDate, weekStart, weekdayOf } from '../../engine/day'
 import { type ReminderKind, dueReminders, remindersOf } from '../../engine/reminders'
@@ -37,7 +37,7 @@ function readDismissed(date: LocalDate): ReminderKind[] {
   }
 }
 
-function ReminderCard({ title, text, action, onAction, onLater }: { title: string; text: string; action: string; onAction: () => void; onLater: () => void }) {
+function ReminderCard({ title, text, action, onAction, onLater }: { title: string; text: string; action: string; onAction: () => void; onLater?: () => void }) {
   return (
     <Card className="border-accent bg-accent/10">
       <p className="text-lg font-bold">🔔 {title}</p>
@@ -46,9 +46,11 @@ function ReminderCard({ title, text, action, onAction, onLater }: { title: strin
         <Button variant="primary" onClick={onAction}>
           {action}
         </Button>
-        <Button variant="ghost" onClick={onLater}>
-          나중에
-        </Button>
+        {onLater && (
+          <Button variant="ghost" onClick={onLater}>
+            나중에
+          </Button>
+        )}
       </div>
     </Card>
   )
@@ -94,6 +96,7 @@ function TodayView({ settings, program, today }: { settings: Settings; program: 
   const at = (t: string) => timeOnLogicalDate(today, t, settings.dayBoundaryHour).getTime()
 
   const navigate = useNavigate()
+  const pendingCount = usePendingProposals()?.length ?? 0
   const [dismissed, setDismissed] = useState<ReminderKind[]>(() => readDismissed(today))
   const dismiss = (k: ReminderKind) => {
     const next = [...dismissed, k]
@@ -245,6 +248,15 @@ function TodayView({ settings, program, today }: { settings: Settings; program: 
           action="운동 시작하러 가기"
           onAction={() => navigate('/workout')}
           onLater={() => dismiss('workout')}
+        />
+      )}
+
+      {pendingCount > 0 && (
+        <ReminderCard
+          title={`코치 제안 ${pendingCount}개`}
+          text="기록을 보고 다음 루틴·식단 변경을 제안했습니다. 승인해야 적용됩니다."
+          action="확인하기"
+          onAction={() => navigate('/coach')}
         />
       )}
 

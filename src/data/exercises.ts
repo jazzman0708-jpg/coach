@@ -294,3 +294,15 @@ export const EQUIPMENT_LABEL = {
 
 /** 어깨 측면 근거: 덤벨 숄더 프레스 ≈ 레터럴 레이즈 (Campos 2020). 파이크 계열에 적용은 외삽 */
 export const DELT_SIDE_BASIS = evx('덤벨 숄더 프레스 결과를 맨몸 파이크 계열에 적용', 'campos2020#medialDelt')
+
+/** 요청서의 목표: 어깨·가슴·등 우선, 하체 유지 (설정에서 목표를 바꾸는 기능은 5단계) */
+export const GOAL_PRIORITY: Record<keyof typeof MUSCLE_LABEL, 'priority' | 'maintain' | 'normal'> = {
+  delt_side: 'priority',
+  chest: 'priority',
+  back: 'priority',
+  delt_front: 'normal',
+  delt_rear: 'normal',
+  abs: 'normal',
+  arms: 'normal',
+  legs: 'maintain',
+}

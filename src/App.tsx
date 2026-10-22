@@ -1,5 +1,6 @@
 import { NavLink, Outlet, RouterProvider, createHashRouter } from 'react-router-dom'
-import { useActiveSession, useSettings } from './db/hooks'
+import { useActiveSession, usePendingProposals, useSettings } from './db/hooks'
+import CoachPage from './features/coach/CoachPage'
 import DietPage from './features/diet/DietPage'
 import RecordsPage from './features/records/RecordsPage'
 import { Onboarding } from './features/settings/Onboarding'
@@ -12,7 +13,7 @@ const NAV = [
   { to: '/', label: '오늘', icon: '◎' },
   { to: '/workout', label: '운동', icon: '▲' },
   { to: '/diet', label: '식단', icon: '◒' },
-  { to: '/timer', label: '타이머', icon: '◷' },
+  { to: '/coach', label: '코치', icon: '✦' },
   { to: '/records', label: '기록', icon: '≡' },
   { to: '/settings', label: '설정', icon: '⚙︎' },
 ]
@@ -21,6 +22,7 @@ function Layout() {
   const settings = useSettings()
   const active = useActiveSession()
   const inProgress = active !== 'loading' && !!active
+  const pendingCount = usePendingProposals()?.length ?? 0
 
   return (
     <>
@@ -37,6 +39,9 @@ function Layout() {
                 <span className="text-lg leading-6">{n.icon}</span>
                 {n.label}
                 {n.to === '/workout' && inProgress && <span className="absolute right-[30%] top-1.5 h-2 w-2 rounded-full bg-bad" />}
+                {n.to === '/coach' && pendingCount > 0 && (
+                  <span className="absolute right-[22%] top-1 min-w-4 rounded-full bg-accent px-1 text-[10px] leading-4 font-bold text-accent-ink">{pendingCount}</span>
+                )}
               </NavLink>
             </li>
           ))}
@@ -55,6 +60,7 @@ const router = createHashRouter([
       { path: '/workout', element: <WorkoutPage /> },
       { path: '/diet', element: <DietPage /> },
       { path: '/timer', element: <TimerPage /> },
+      { path: '/coach', element: <CoachPage /> },
       { path: '/records', element: <RecordsPage /> },
       { path: '/settings', element: <SettingsPage /> },
     ],
