@@ -1,13 +1,18 @@
-import { EXERCISES, GOAL_PRIORITY, LADDERS, MUSCLE_LABEL } from '../data/exercises'
+import { DEFAULT_GOAL_PRIORITY, EXERCISES, type GoalLevel, LADDERS, MUSCLE_LABEL } from '../data/exercises'
 import { ev, evx, pref } from '../data/rules'
 import type { Rules } from '../data/rules'
 import { addDays } from './day'
-import type { Equipment, LocalDate, Muscle, ProgramVersion, ProposalDraft, WarningDraft, WorkoutSession } from './types'
+import type { Equipment, LocalDate, Muscle, ProgramVersion, ProposalDraft, Settings, WarningDraft, WorkoutSession } from './types'
 
 // 부위 균형: 최근 7일 부위별 세트 (주동근 1세트, 보조근 0.5세트 — Pelland 2025)
 // 우선 부위(어깨 측면·가슴·등)는 주 5~10세트, 유지 부위(하체)는 주 4세트 이상 + 주 2일 이상(WHO)
 
 export type MuscleSets = Record<Muscle, number>
+
+/** 설정의 부위별 목표 (없는 부위는 요청서 기본값) */
+export function goalPriority(settings: Settings): Record<Muscle, GoalLevel> {
+  return { ...DEFAULT_GOAL_PRIORITY, ...settings.goals?.priority }
+}
 
 export function weeklySets(sessions: WorkoutSession[], today: LocalDate, rules: Rules): { sets: MuscleSets; days: Record<Muscle, number> } {
   const from = addDays(today, -6)
@@ -37,20 +42,21 @@ export function balanceReview(input: {
   today: LocalDate
   program: ProgramVersion
   equipment: Equipment[]
+  priority: Record<Muscle, GoalLevel>
   rules: Rules
 }): { proposals: ProposalDraft[]; warnings: WarningDraft[]; sets: MuscleSets } {
-  const { sessions, today, program, equipment, rules } = input
+  const { sessions, today, program, equipment, priority, rules } = input
   const { sets, days } = weeklySets(sessions, today, rules)
   const proposals: ProposalDraft[] = []
   const warnings: WarningDraft[] = []
   const [low] = rules.strength.weeklySetsPriority.value ?? [5, 10]
   const maintain = rules.strength.weeklySetsMaintain.value ?? 4
-  const goalBasis = pref('요청서의 목표: 어깨 측면·가슴·등 우선, 하체는 유지')
+  const goalBasis = pref('설정 → 목표에서 정한 부위별 우선순위 (기본값은 요청서: 어깨 측면·가슴·등 우선, 하체 유지)')
   const anyStrength = sessions.some((s) => s.kind === 'strength' && s.status === 'done' && s.date >= addDays(today, -6))
 
   if (anyStrength) {
-    for (const m of Object.keys(GOAL_PRIORITY) as Muscle[]) {
-      const p = GOAL_PRIORITY[m]
+    for (const m of Object.keys(priority) as Muscle[]) {
+      const p = priority[m]
       if (p === 'priority' && sets[m] < low) {
         warnings.push({
           key: `sets:${m}`,
@@ -84,7 +90,7 @@ export function balanceReview(input: {
   }
 
   // 어깨 측면이 우선인데 처방에 직접 자극 종목이 없으면 → 레터럴 레이즈 추가 또는 장비 제안
-  if (GOAL_PRIORITY.delt_side === 'priority' && !program.slots.some((s) => s.pattern === 'lateral_delt')) {
+  if (priority.delt_side === 'priority' && !program.slots.some((s) => s.pattern === 'lateral_delt')) {
     const ladder = LADDERS.find((l) => l.pattern === 'lateral_delt')!
     const option = (ladder.loaded ?? []).map((id) => EXERCISES[id]).find((e) => e && hasAll(equipment, e.equipment))
     if (option) {
@@ -107,7 +113,7 @@ export function balanceReview(input: {
   }
 
   // 수직 밀기가 없으면 → 파이크 푸쉬업 계열 추가 (숄더 프레스 ≈ 레터럴 레이즈, Campos 2020)
-  if (GOAL_PRIORITY.delt_side === 'priority' && !program.slots.some((s) => s.pattern === 'vertical_push')) {
+  if (priority.delt_side === 'priority' && !program.slots.some((s) => s.pattern === 'vertical_push')) {
     const ladder = LADDERS.find((l) => l.pattern === 'vertical_push')!
     const first = ladder.steps.map((id) => EXERCISES[id]).find((e) => e && hasAll(equipment, e.equipment))
     if (first) {

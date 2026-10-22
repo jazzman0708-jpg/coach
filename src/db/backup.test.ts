@@ -35,3 +35,13 @@ describe('백업·복원', () => {
     expect(() => parseBackup('{"app":"coach","schemaVersion":99,"tables":{}}')).toThrow()
   })
 })
+
+describe('비밀값', () => {
+  it('API 키는 내보내기에 들어가지 않는다', async () => {
+    const db = new CoachDB('t-secret')
+    await db.secrets.put({ key: 'claudeApiKey', value: 'sk-ant-test-123' })
+    const file = await exportAll(db, { includePhotos: false, now: new Date('2026-10-22T12:00:00Z') })
+    expect(JSON.stringify(file)).not.toContain('sk-ant-test-123')
+    await db.delete()
+  })
+})

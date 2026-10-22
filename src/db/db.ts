@@ -4,6 +4,8 @@ import type {
   ChangeProposal,
   EvidenceQuestion,
   ReviewRun,
+  Secret,
+  WeekMenu,
   RuleOverride,
   DrinkLog,
   MealLog,
@@ -33,6 +35,9 @@ export class CoachDB extends Dexie {
   questions!: EntityTable<EvidenceQuestion, 'id'>
   ruleOverrides!: EntityTable<RuleOverride, 'key'>
   reviews!: EntityTable<ReviewRun, 'weekOf'>
+  weekMenus!: EntityTable<WeekMenu, 'weekOf'>
+  /** API 키 등. 백업(내보내기)에 넣지 않는다 */
+  secrets!: EntityTable<Secret, 'key'>
 
   constructor(name = 'coach') {
     super(name)
@@ -54,6 +59,11 @@ export class CoachDB extends Dexie {
       questions: 'id, ruleKey, status',
       ruleOverrides: 'key',
       reviews: 'weekOf',
+    })
+    // 5단계: AI 주간 메뉴, 기기 전용 비밀값(API 키)
+    this.version(3).stores({
+      weekMenus: 'weekOf, status',
+      secrets: 'key',
     })
     this.on('populate', (tx) => {
       tx.table('settings').add(DEFAULT_SETTINGS)
@@ -79,6 +89,7 @@ export const DATA_TABLES = [
   'questions',
   'ruleOverrides',
   'reviews',
+  'weekMenus',
 ] as const
 
 export const newId = () => crypto.randomUUID()

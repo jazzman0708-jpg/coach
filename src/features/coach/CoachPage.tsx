@@ -3,7 +3,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Why } from '../../components/Why'
 import { Badge, Button, Card, CardTitle, Loading, NumberInput, Page, ProgressBar, cx } from '../../components/ui'
 import { CARDIO_BY_KIND } from '../../data/drinks'
-import { EQUIPMENT_LABEL, EXERCISES, GOAL_PRIORITY, MUSCLE_LABEL, PATTERN_LABEL } from '../../data/exercises'
+import { EQUIPMENT_LABEL, EXERCISES, MUSCLE_LABEL, PATTERN_LABEL } from '../../data/exercises'
+import { goalPriority } from '../../engine/balance'
 import type { Rules } from '../../data/rules'
 import { db } from '../../db/db'
 import { useProgram, useRules, useSettings, useToday } from '../../db/hooks'
@@ -225,6 +226,7 @@ function WarningItem({ w }: { w: WarningDraft }) {
 
 function Summary({ review, settings, rules, today }: { review: WeeklyReview; settings: Settings; rules: Rules; today: LocalDate }) {
   const s = review.summary
+  const priority = goalPriority(settings)
   const [low, high] = rules.strength.weeklySetsPriority.value ?? [5, 10]
   const maintain = rules.strength.weeklySetsMaintain.value ?? 4
   const [cardioTarget] = rules.cardio.weeklyModerateMin.value ?? [150, 300]
@@ -240,7 +242,7 @@ function Summary({ review, settings, rules, today }: { review: WeeklyReview; set
       <h3 className="mb-2 text-sm font-semibold text-muted">부위별 세트 (근력 {s.strengthSessions}회)</h3>
       <ul className="space-y-2">
         {(Object.keys(MUSCLE_LABEL) as Muscle[]).map((m) => {
-          const p = GOAL_PRIORITY[m]
+          const p = priority[m]
           const goal = p === 'priority' ? low : p === 'maintain' ? maintain : 0
           return (
             <li key={m} className="text-sm">

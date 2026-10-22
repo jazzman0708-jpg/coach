@@ -2,21 +2,24 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Why } from '../../components/Why'
-import { Badge, Button, Card, CardTitle, Loading, Page, cx } from '../../components/ui'
+import { Badge, Button, Card, CardTitle, Loading, Page, ProgressBar, cx } from '../../components/ui'
 import { DRINK_BY_ID } from '../../data/drinks'
-import { type Recipe, findRecipe } from '../../data/recipes'
+import type { Recipe } from '../../data/recipes'
 import { RULES } from '../../data/rules'
 import { db, newId } from '../../db/db'
 import { useActiveSession, usePendingProposals, useProgram, useSettings, useToday } from '../../db/hooks'
-import { alcoholByDay, drinkingStatus } from '../../engine/alcohol'
-import { addDays, formatKoreanDate, timeOnLogicalDate, weekStart, weekdayOf } from '../../engine/day'
+import { alcoholByDay, drinkingStatus, logKcal } from '../../engine/alcohol'
+import { eatenToday } from '../../engine/nutrition'
+import { addDays, formatKoreanDate, timeOnLogicalDate, weekStart } from '../../engine/day'
 import { type ReminderKind, dueReminders, remindersOf } from '../../engine/reminders'
 import { dayKind } from '../../engine/schedule'
 import { shortSleepWarning, sleepHours } from '../../engine/sleep'
-import type { LocalDate, MealLog, MealSlot, ProgramVersion, Settings } from '../../engine/types'
+import type { AiDinner, LocalDate, MealLog, MealSlot, ProgramVersion, Settings } from '../../engine/types'
 import { hhmm, nowIso, useNow } from '../../lib/time'
 import { DrinkSheet, MealDifferentSheet, SleepSheet, WeightSheet, lastNight } from '../records/forms'
+import { AiRecipeSheet } from '../diet/AiMenuCard'
 import { RecipeSheet } from '../diet/DietPage'
+import { NUTRITION_BASIS, planForDate, useActiveWeekMenu } from '../diet/plan'
 import { WorkoutStartCard } from '../workout/StartCard'
 
 export default function TodayPage() {
@@ -76,6 +79,8 @@ function TodayView({ settings, program, today }: { settings: Settings; program: 
   const [sheet, setSheet] = useState<null | 'weight' | 'sleep' | 'drink' | { meal: MealSlot; label: string }>(null)
   const close = () => setSheet(null)
   const [recipe, setRecipe] = useState<Recipe | null>(null)
+  const [aiRecipe, setAiRecipe] = useState<AiDinner | null>(null)
+  const ai = useActiveWeekMenu(today)
 
   const kind = dayKind(today, program)
   const status = drinkingStatus({
@@ -91,7 +96,6 @@ function TodayView({ settings, program, today }: { settings: Settings; program: 
   const todayBody = lastBody.find((b) => b.date === today)
   const lastWeight = lastBody.find((b) => b.weightKg !== undefined)?.weightKg ?? settings.profile.startWeightKg ?? 70
   const lastWaist = lastBody.find((b) => b.waistCm !== undefined)?.waistCm
-  const wd = weekdayOf(today)
   const sch = settings.schedule
   const at = (t: string) => timeOnLogicalDate(today, t, settings.dayBoundaryHour).getTime()
 
@@ -127,11 +131,16 @@ function TodayView({ settings, program, today }: { settings: Settings; program: 
     return db.mealLogs.add({ id: newId(), date: today, slot, status: st, at: nowIso() })
   }
 
+  const todayAlcoholKcal = drinks.filter((d) => d.date === today).reduce((sum, l) => sum + logKcal(l, DRINK_BY_ID, RULES), 0)
+  const todaysPlan = planForDate(program, today, ai ?? null, { drinking: todayAlcoholKcal > 0 })
+  const eaten = eatenToday(todaysPlan, meals, todayAlcoholKcal)
+
   const mealItem = (slot: Exclude<MealSlot, 'extra'>, time: string) => {
-    const plan = program.meals.find((m) => m.slot === slot)
-    const menu = plan?.byWeekday?.[wd] ?? plan?.default ?? ''
+    const plan = todaysPlan.slots.find((m) => m.slot === slot)
+    const menu = plan?.menu ?? ''
     const log = meals.find((m) => m.slot === slot)
-    const r = findRecipe(menu)
+    const r = plan?.recipe
+    const aiDinner = plan?.ai
     return {
       time,
       title: MEAL_LABEL[slot],
@@ -139,13 +148,17 @@ function TodayView({ settings, program, today }: { settings: Settings; program: 
         <>
           <p>
             {menu}
-            {r && (
-              <button type="button" className="ml-2 text-xs font-semibold text-accent underline" onClick={() => setRecipe(r)}>
+            {(r || aiDinner) && (
+              <button
+                type="button"
+                className="ml-2 text-xs font-semibold text-accent underline"
+                onClick={() => (aiDinner ? setAiRecipe(aiDinner) : r && setRecipe(r))}
+              >
                 레시피
               </button>
             )}
           </p>
-          {plan?.note && <p className="text-xs text-muted">{plan.note}</p>}
+          {plan?.note && !aiDinner && <p className="text-xs text-muted">{plan.note}</p>}
           {log?.status === 'different' && <p className="text-xs text-accent">먹은 것: {log.note}</p>}
         </>
       ),
@@ -316,15 +329,47 @@ function TodayView({ settings, program, today }: { settings: Settings; program: 
       </Card>
 
       <Card>
-        <CardTitle right={<Why why={{ summary: `시작 목표: ${program.nutrition.kcal.toLocaleString()} kcal, 단백질 ${program.nutrition.proteinG} g, 지방 ${program.nutrition.fatG} g` }} basis={[program.nutrition.basis]} />}>
+        <CardTitle
+          right={
+            <Why
+              why={{
+                summary: `끼니 체크로 계산합니다. '계획대로'는 메뉴의 재료·분량을 식품성분표로 계산한 값, '다른 거'는 직접 입력한 값, 술은 알코올 1 g당 7 kcal로 더했습니다.${eaten.unknown ? ` 값을 모르는 끼니 ${eaten.unknown}개는 빠져 있습니다.` : ''}`,
+                data: [
+                  { label: '계획대로 다 먹으면', value: `${Math.round(todaysPlan.total.kcal)} kcal · 단백질 ${Math.round(todaysPlan.total.proteinG)} g` },
+                  { label: '오늘 술', value: `${Math.round(todayAlcoholKcal)} kcal` },
+                ],
+              }}
+              basis={[program.nutrition.basis, ...NUTRITION_BASIS, RULES.alcohol.kcalPerGram.basis]}
+            />
+          }
+        >
           단백질·칼로리
         </CardTitle>
-        <p className="text-sm text-muted">
-          목표 {program.nutrition.kcal.toLocaleString()} kcal · 단백질 {program.nutrition.proteinG} g. 진행 바는 식품성분 DB를 붙이는 4단계에서 켜집니다. 지금은 끼니 체크만 기록됩니다.
-        </p>
+        <div className="space-y-3 text-sm">
+          <div>
+            <div className="flex justify-between">
+              <span>단백질</span>
+              <span className="tabular">
+                {eaten.proteinG} / {program.nutrition.proteinG} g
+              </span>
+            </div>
+            <ProgressBar value={eaten.proteinG} max={program.nutrition.proteinG} tone={eaten.proteinG >= program.nutrition.proteinG ? 'ok' : 'accent'} />
+          </div>
+          <div>
+            <div className="flex justify-between">
+              <span>칼로리{todayAlcoholKcal > 0 ? ' (술 포함)' : ''}</span>
+              <span className={cx('tabular', eaten.kcal > program.nutrition.kcal && 'text-warn')}>
+                {eaten.kcal.toLocaleString()} / {program.nutrition.kcal.toLocaleString()} kcal
+              </span>
+            </div>
+            <ProgressBar value={eaten.kcal} max={program.nutrition.kcal} tone={eaten.kcal > program.nutrition.kcal ? 'warn' : 'accent'} />
+          </div>
+          <p className="text-xs text-muted">위 타임라인에서 끼니를 체크하면 채워집니다.</p>
+        </div>
       </Card>
 
       {recipe && <RecipeSheet recipe={recipe} onClose={() => setRecipe(null)} />}
+      {aiRecipe && <AiRecipeSheet dinner={aiRecipe} onClose={() => setAiRecipe(null)} />}
       {sheet === 'weight' && <WeightSheet open onClose={close} date={today} lastWeight={lastWeight} lastWaist={lastWaist} />}
       {sheet === 'sleep' && <SleepSheet open onClose={close} settings={settings} night={lastNight(today)} />}
       {sheet === 'drink' && <DrinkSheet open onClose={close} date={today} />}

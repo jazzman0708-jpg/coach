@@ -5,7 +5,7 @@ import { CARDIO_BY_KIND, DRINK_BY_ID } from '../../data/drinks'
 import { EXERCISES } from '../../data/exercises'
 import { RULES } from '../../data/rules'
 import { db, newId } from '../../db/db'
-import { useSettings, useToday } from '../../db/hooks'
+import { useRules, useSettings, useToday } from '../../db/hooks'
 import { logGrams, logKcal } from '../../engine/alcohol'
 import { formatKoreanDate, weekStart } from '../../engine/day'
 import { sleepHours } from '../../engine/sleep'
@@ -13,9 +13,11 @@ import type { LocalDate, PantryItem, Photo, Settings } from '../../engine/types'
 import { formatClock, hhmm, nowIso } from '../../lib/time'
 import { DrinkSheet, MonthlySheet, SleepSheet, WeightSheet, lastNight } from './forms'
 import { SessionEditSheet } from './SessionEditSheet'
+import { StatsTab } from './StatsTab'
 
-type Tab = 'body' | 'sleep' | 'drink' | 'monthly' | 'pantry' | 'workout'
+type Tab = 'stats' | 'body' | 'sleep' | 'drink' | 'monthly' | 'pantry' | 'workout'
 const TABS: { value: Tab; label: string }[] = [
+  { value: 'stats', label: '통계' },
   { value: 'body', label: '체중·허리' },
   { value: 'sleep', label: '수면' },
   { value: 'drink', label: '음주' },
@@ -27,10 +29,11 @@ const TABS: { value: Tab; label: string }[] = [
 export default function RecordsPage() {
   const settings = useSettings()
   const today = useToday(settings)
-  const [tab, setTab] = useState<Tab>('body')
-  if (!settings || !today) return <Loading />
+  const rules = useRules()
+  const [tab, setTab] = useState<Tab>('stats')
+  if (!settings || !today || !rules) return <Loading />
   return (
-    <Page title="기록">
+    <Page title="기록·통계">
       <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
         {TABS.map((t) => (
           <button
@@ -43,6 +46,7 @@ export default function RecordsPage() {
           </button>
         ))}
       </div>
+      {tab === 'stats' && <StatsTab today={today} settings={settings} rules={rules} />}
       {tab === 'body' && <BodyTab today={today} settings={settings} />}
       {tab === 'sleep' && <SleepTab today={today} settings={settings} />}
       {tab === 'drink' && <DrinkTab today={today} />}

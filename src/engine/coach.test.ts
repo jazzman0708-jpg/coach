@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { DEFAULT_GOAL_PRIORITY } from '../data/exercises'
 import { DEFAULT_SETTINGS, INITIAL_PROGRAM } from '../data/initialProgram'
 import { RULES } from '../data/rules'
 import { balanceReview } from './balance'
@@ -110,19 +111,25 @@ describe('운동 진행 (ACSM 2009 + 결정 D1·D2)', () => {
 
 describe('부위 균형', () => {
   it('어깨 측면 종목이 없고 밴드도 없으면 밴드 구입과 수직 밀기 추가를 제안한다', () => {
-    const r = balanceReview({ sessions: [], today: '2026-10-25', program: INITIAL_PROGRAM, equipment: EQUIP, rules: RULES })
+    const r = balanceReview({ sessions: [], today: '2026-10-25', program: INITIAL_PROGRAM, equipment: EQUIP, priority: DEFAULT_GOAL_PRIORITY, rules: RULES })
     expect(r.proposals.map((p) => p.key)).toEqual(['equip:lateral_delt', 'slot:vertical_push'])
     expect(r.proposals[1].patch).toMatchObject({ to: { exerciseId: 'incline_pike_pushup' } })
   })
 
   it('밴드가 생기면 레터럴 레이즈를 넣자고 제안한다', () => {
-    const r = balanceReview({ sessions: [], today: '2026-10-25', program: INITIAL_PROGRAM, equipment: [...EQUIP, 'band'], rules: RULES })
+    const r = balanceReview({ sessions: [], today: '2026-10-25', program: INITIAL_PROGRAM, equipment: [...EQUIP, 'band'], priority: DEFAULT_GOAL_PRIORITY, rules: RULES })
     expect(r.proposals[0].patch).toMatchObject({ op: 'slot.set', to: { exerciseId: 'band_lateral_raise' } })
+  })
+
+  it('설정에서 어깨 측면을 우선에서 빼면 어깨 관련 추가 제안이 나오지 않는다', () => {
+    const priority = { ...DEFAULT_GOAL_PRIORITY, delt_side: 'normal' as const }
+    const r = balanceReview({ sessions: [], today: '2026-10-25', program: INITIAL_PROGRAM, equipment: EQUIP, priority, rules: RULES })
+    expect(r.proposals).toEqual([])
   })
 
   it('주동근 1세트, 보조근 0.5세트로 센다', () => {
     const s = strength('2026-10-21', 'sink_pushup', 8, [8, 8, 8])
-    const r = balanceReview({ sessions: [s], today: '2026-10-25', program: INITIAL_PROGRAM, equipment: EQUIP, rules: RULES })
+    const r = balanceReview({ sessions: [s], today: '2026-10-25', program: INITIAL_PROGRAM, equipment: EQUIP, priority: DEFAULT_GOAL_PRIORITY, rules: RULES })
     expect(r.sets.chest).toBe(3)
     expect(r.sets.delt_front).toBe(1.5)
   })

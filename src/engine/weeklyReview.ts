@@ -3,7 +3,7 @@ import { ev } from '../data/rules'
 import type { Rules } from '../data/rules'
 import { alcoholByDay } from './alcohol'
 import type { MuscleSets } from './balance'
-import { balanceReview } from './balance'
+import { balanceReview, goalPriority } from './balance'
 import { type WeekWindow, nutritionReview } from './bodyTrend'
 import { cardioReview } from './cardioReview'
 import { addDays, daysBetween } from './day'
@@ -67,7 +67,7 @@ export function runWeeklyReview(input: {
   }
 
   // 부위 균형
-  const balance = balanceReview({ sessions, today, program, equipment, rules })
+  const balance = balanceReview({ sessions, today, program, equipment, priority: goalPriority(settings), rules })
   proposals.push(...balance.proposals.filter((p) => !proposals.some((q) => q.key === p.key)))
   warnings.push(...balance.warnings)
 

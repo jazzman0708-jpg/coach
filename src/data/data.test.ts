@@ -94,3 +94,17 @@ describe('웹 푸시', () => {
     expect(bytes[0]).toBe(4) // 압축하지 않은 EC 공개키
   })
 })
+
+describe('식품성분', () => {
+  it('모든 식재료에 영양값과 출처가 있고, 메뉴가 쓰는 단위 무게가 정의되어 있다', async () => {
+    const { FOODS, FOOD_IDS, unitGrams } = await import('./foods')
+    const { MENU_DEFS } = await import('./menuItems')
+    for (const id of FOOD_IDS) {
+      expect(FOODS[id], id).toBeDefined()
+      expect(FOODS[id].source, id).toContain('DB')
+    }
+    for (const def of MENU_DEFS) {
+      for (const it of def.items) if (it.unit !== 'g') expect(unitGrams(it.food, it.unit), `${def.id} ${it.food} ${it.unit}`).toBeGreaterThan(0)
+    }
+  })
+})

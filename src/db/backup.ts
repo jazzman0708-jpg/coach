@@ -1,7 +1,7 @@
 import { type CoachDB, DATA_TABLES } from './db'
 import type { Photo } from '../engine/types'
 
-export const SCHEMA_VERSION = 2
+export const SCHEMA_VERSION = 3
 
 interface PhotoJson {
   id: string

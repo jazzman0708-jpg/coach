@@ -13,6 +13,9 @@
   --color-ok: var(--ok);
   --color-warn: var(--warn);
   --color-bad: var(--bad);
+  --color-series-1: var(--series-1);
+  --color-series-2: var(--series-2);
+  --color-grid: var(--grid);
 }
 
 :root {
@@ -27,6 +30,10 @@
   --ok: #15803d;
   --warn: #b45309;
   --bad: #dc2626;
+  /* 차트: dataviz 검증 팔레트 (밝은 화면, #ffffff 기준 통과) */
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --grid: #e8ebef;
   color-scheme: light;
 }
 
@@ -43,6 +50,10 @@
     --ok: #4ade80;
     --warn: #fbbf24;
     --bad: #f87171;
+    /* 차트: 어두운 화면용 단계 (#141a22 기준 통과) */
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --grid: #232c38;
     color-scheme: dark;
   }
 }

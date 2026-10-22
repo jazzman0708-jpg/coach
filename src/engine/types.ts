@@ -342,6 +342,8 @@ export interface Settings {
   dayBoundaryHour: number
   sound: boolean
   vibration: boolean
+  /** 부위별 목표. 없는 부위는 기본값(요청서 목표) */
+  goals?: { priority: Partial<Record<Muscle, 'priority' | 'maintain' | 'normal'>> }
   /** 앱 안 알림. 없으면 기본값(수면 기록 11:00, 운동 시간 알림 켬) */
   reminders?: {
     sleepLog?: { enabled: boolean; time: string }
@@ -412,4 +414,29 @@ export interface RuleOverride {
 export interface ReviewRun {
   weekOf: LocalDate
   ranAt: LocalDateTime
+}
+
+// ───────────────────────── AI 메뉴 ─────────────────────────
+
+export interface AiDinner {
+  date: LocalDate
+  name: string
+  /** 식품성분 표에 있는 식재료만, 1인분 g */
+  ingredients: { food: string; grams: number }[]
+  /** 양념 (영양 계산에서 빠짐) */
+  seasonings: string[]
+  steps: string[]
+}
+
+export interface WeekMenu {
+  weekOf: LocalDate
+  createdAt: LocalDateTime
+  model: string
+  dinners: AiDinner[]
+  status: 'draft' | 'active'
+}
+
+export interface Secret {
+  key: 'claudeApiKey'
+  value: string
 }

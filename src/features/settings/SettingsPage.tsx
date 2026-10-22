@@ -3,13 +3,15 @@ import { BirthDateInput } from '../../components/BirthDateInput'
 import { BasisView } from '../../components/Why'
 import { Badge, Button, Card, CardTitle, Field, Loading, NumberInput, Page, Segmented, Sheet, Stepper, inputClass } from '../../components/ui'
 import { EVIDENCE } from '../../data/evidence'
-import { EQUIPMENT_LABEL } from '../../data/exercises'
+import { EQUIPMENT_LABEL, GOAL_LEVEL_LABEL, type GoalLevel, MUSCLE_LABEL } from '../../data/exercises'
+import { goalPriority } from '../../engine/balance'
 import { db } from '../../db/db'
 import { exportAll, importAll, parseBackup, resetAll } from '../../db/backup'
 import { updateSettings, useProgram, useSettings } from '../../db/hooks'
 import { remindersOf } from '../../engine/reminders'
-import type { Equipment, Schedule, Settings } from '../../engine/types'
+import type { Equipment, Muscle, Schedule, Settings } from '../../engine/types'
 import { canVibrate, canWakeLock } from '../../lib/device'
+import { AiKeyCard } from './AiKeyCard'
 import { PushCard } from './PushCard'
 
 export const DISCLAIMER = '의학적 진단·치료를 대신하지 않습니다. 통증·질환이 있으면 전문의와 상담하세요.'
@@ -31,6 +33,7 @@ export default function SettingsPage() {
   if (!settings || !program) return <Loading />
   const set = (fn: (s: Settings) => void) => updateSettings(fn)
   const reminders = remindersOf(settings)
+  const priority = goalPriority(settings)
 
   return (
     <Page title="설정">
@@ -86,6 +89,27 @@ export default function SettingsPage() {
             />
           </Field>
         </div>
+      </Card>
+
+      <Card>
+        <CardTitle>목표 (부위별 우선순위)</CardTitle>
+        <p className="mb-3 text-sm text-muted">
+          코치는 '우선' 부위를 주 5~10세트, '유지' 부위를 주 4세트 이상으로 맞추도록 제안합니다. 어깨 측면이 '우선'이면 어깨 종목 추가를 제안합니다.
+        </p>
+        <ul className="space-y-2">
+          {(Object.keys(MUSCLE_LABEL) as Muscle[]).map((m) => (
+            <li key={m} className="flex items-center gap-3">
+              <span className="w-20 shrink-0 text-sm">{MUSCLE_LABEL[m]}</span>
+              <div className="flex-1">
+                <Segmented<GoalLevel>
+                  value={priority[m]}
+                  onChange={(v) => set((s) => void (s.goals = { priority: { ...s.goals?.priority, [m]: v } }))}
+                  options={(['priority', 'normal', 'maintain'] as GoalLevel[]).map((v) => ({ value: v, label: GOAL_LEVEL_LABEL[v] }))}
+                />
+              </div>
+            </li>
+          ))}
+        </ul>
       </Card>
 
       <Card>
@@ -210,6 +234,8 @@ export default function SettingsPage() {
       </Card>
 
       <PushCard />
+
+      <AiKeyCard />
 
       <DataCard />
 
