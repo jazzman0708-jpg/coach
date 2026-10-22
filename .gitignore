@@ -1,0 +1,8 @@
+node_modules
+dist
+dev-dist
+.DS_Store
+
+# 로컬 전용: 개인 정보가 담긴 검토·설계 문서와 이 기기의 실행 설정
+docs/
+.claude/

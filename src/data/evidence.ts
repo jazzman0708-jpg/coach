@@ -1,0 +1,613 @@
+import type { EvidenceSource } from '../engine/types'
+
+// 근거 출처. 원문 대조 결과는 docs/01-rule-review.md 참고 (2026-10-22).
+// check: primary = 원문(또는 같은 내용의 1차 논문) 대조 / secondary = 2차 자료만 / unchecked = 미대조
+
+const sources: EvidenceSource[] = [
+  // ───────────── 운동 ─────────────
+  {
+    id: 'acsm2009',
+    org: 'ACSM',
+    title: 'Progression Models in Resistance Training for Healthy Adults (Position Stand), Med Sci Sports Exerc 41(3):687–708',
+    year: 2009,
+    url: 'https://www.sportgeneeskunde.com/wp-content/uploads/ACSM-Position-Stand-Progression-Models-in-Resistance-Training-for-Healthy-Adults.pdf',
+    primaryUrl: 'https://doi.org/10.1249/MSS.0b013e3181915670',
+    check: 'primary',
+    note: '요청서 링크는 1쪽 요약본. 전문으로 대조함.',
+    claims: {
+      novice: {
+        text: '초보자: 전신 주 2~3회, 종목당 1~3세트, 1RM 60~70%로 8~12회',
+        values: { daysPerWeek: [2, 3], sets: [1, 3], reps: [8, 12] },
+      },
+      progression: {
+        text: '목표보다 1~2회 더 하는 것이 2회 연속 세션에서 나오면 부하를 2~10% 올린다 (작은 근육은 낮게, 큰 근육은 높게)',
+        values: { overBy: [1, 2], consecutiveSessions: 2, loadIncreasePct: [2, 10] },
+      },
+      levels: {
+        text: '초보자 = 저항운동 경험이 없거나 수년간 쉰 사람 / 중급자 = 약 6개월 꾸준한 경험 / 고급자 = 수년 경험',
+        values: { intermediateMonths: 6 },
+      },
+      intermediate: {
+        text: '중급자: 전신이면 주 3회, 상·하체 분할이면 주 4회',
+        values: { daysPerWeek: [3, 4] },
+      },
+      rest: {
+        text: '근비대 목적 초·중급자는 세트 사이 1~2분. 무거운 핵심 종목(근력 목적)은 2~3분',
+        values: { hypertrophySec: [60, 120], strengthCoreSec: [120, 180] },
+      },
+      isometric: { text: '등척성(버티기) 동작을 포함하라고 하나, 버티기 시간의 범위·증가 폭은 제시하지 않음' },
+    },
+  },
+  {
+    id: 'garber2011',
+    org: 'ACSM',
+    title: 'Quantity and Quality of Exercise for Developing and Maintaining Fitness (Position Stand), Med Sci Sports Exerc 43(7):1334–1359',
+    year: 2011,
+    url: 'https://doi.org/10.1249/MSS.0b013e318213fefb',
+    check: 'primary',
+    claims: {
+      rest48: { text: '같은 근육군은 저항운동 세션 사이에 48시간 이상 쉰다 (근거 등급 A)', values: { hours: 48 } },
+      gradual: { text: '운동량은 시간·빈도·강도를 조절하며 점진적으로 늘리는 것이 합리적 (구체적 비율은 없음)' },
+      rpe: {
+        text: '체감 운동 강도(6~20 척도): 중강도 12~13, 고강도 14~17',
+        values: { moderate: [12, 13], vigorous: [14, 17] },
+      },
+      warmup: { text: '워밍업·정리운동은 일부 상황에서 도움이 되는 것으로 보이나 통제 연구가 부족함 (시간 제시 없음)' },
+    },
+  },
+  {
+    id: 'who2020',
+    org: 'WHO',
+    title: 'WHO Guidelines on Physical Activity and Sedentary Behaviour',
+    year: 2020,
+    url: 'https://www.ncbi.nlm.nih.gov/books/NBK566048/',
+    primaryUrl: 'https://doi.org/10.1136/bjsports-2020-102955',
+    check: 'primary',
+    note: 'NCBI 페이지는 자동 접근이 막혀 같은 내용의 BJSM 2020 논문으로 대조함.',
+    claims: {
+      aerobic: {
+        text: '성인: 중강도 유산소 주 150~300분, 또는 고강도 75~150분, 또는 동등한 조합',
+        values: { moderateMin: [150, 300], vigorousMin: [75, 150] },
+      },
+      strength: { text: '주요 근육군 전체를 쓰는 중강도 이상 근력운동을 주 2일 이상', values: { daysPerWeek: 2 } },
+      startSmall: { text: '조금이라도 하는 것이 안 하는 것보다 낫다. 적게 시작해 빈도·강도·시간을 점차 늘린다' },
+      intensity: {
+        text: '중강도 = 안정 시의 3~6배 미만(3~5.9 MET), 고강도 = 6 MET 이상',
+        values: { moderateMet: [3, 5.9], vigorousMet: 6 },
+      },
+    },
+  },
+  {
+    id: 'compendium2024',
+    org: 'Adult Compendium of Physical Activities',
+    title: '2024 Adult Compendium of Physical Activities, J Sport Health Sci 13(1):6–12',
+    year: 2024,
+    url: 'https://pacompendium.com',
+    primaryUrl: 'https://doi.org/10.1016/j.jshs.2023.10.010',
+    check: 'primary',
+    note: '19~59세 대상. 2011판(Ainsworth 등)에서 빠르게 걷기 4.3 → 4.8 MET로 바뀜.',
+    claims: {
+      met: { text: '1 MET ≈ 1 kcal/kg/시간 → 소모 칼로리 ≈ MET × 체중(kg) × 시간(h). 안정 시 대사를 포함한 총소모량' },
+      walk_moderate: { text: '걷기 시속 4.5~5.5km(2.8~3.4 mph), 평지, 보통 속도: 3.8 MET', values: { met: 3.8 } },
+      walk_brisk: { text: '걷기 시속 5.6~6.3km(3.5~3.9 mph), 평지, 빠르게: 4.8 MET', values: { met: 4.8 } },
+      cycling_leisure: { text: '자전거 시속 16km 미만, 여가: 4.0 MET', values: { met: 4.0 } },
+      cycling_light: { text: '자전거 시속 16~19km, 여가·가벼운 노력: 6.8 MET', values: { met: 6.8 } },
+      cycling_moderate: { text: '자전거 시속 19~22km, 보통 노력: 8.0 MET', values: { met: 8.0 } },
+    },
+  },
+  {
+    id: 'compendium2011',
+    org: 'Compendium of Physical Activities',
+    title: '2011 Compendium of Physical Activities, Med Sci Sports Exerc 43(8):1575–1581',
+    year: 2011,
+    url: 'https://fitmum.ku.dk/2011_Compendium_of_Physical_Activities.pdf',
+    primaryUrl: 'https://doi.org/10.1249/MSS.0b013e31821ece12',
+    check: 'primary',
+    note: '2024판으로 대체 (결정 D4). 비교용으로 남겨둠.',
+    claims: {
+      walk_brisk: { text: '걷기 3.5 mph, 빠르게: 4.3 MET', values: { met: 4.3 } },
+      cycling_light: { text: '자전거 10~11.9 mph: 6.8 MET', values: { met: 6.8 } },
+    },
+  },
+  {
+    id: 'campos2020',
+    org: 'J Hum Kinet',
+    title: 'Different Shoulder Exercises Affect the Activation of Deltoid Portions in Resistance-Trained Individuals, J Hum Kinet 75:5–14',
+    year: 2020,
+    url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC7706677',
+    primaryUrl: 'https://doi.org/10.2478/hukin-2020-0033',
+    check: 'primary',
+    claims: {
+      medialDelt: {
+        text: '중간(측면) 삼각근 활성도(%MVIC): 레터럴 레이즈 30.3%, 숄더 프레스 27.9%, 벤치프레스 5%. 레터럴 레이즈와 숄더 프레스는 통계적 차이 없음',
+        values: { lateralRaise: 30.3, shoulderPress: 27.9, benchPress: 5 },
+        appliesTo: '저항운동 경험 남성 13명, 1RM 60%로 12회',
+      },
+    },
+  },
+  {
+    id: 'vispute2011',
+    org: 'J Strength Cond Res',
+    title: 'The Effect of Abdominal Exercise on Abdominal Fat, J Strength Cond Res 25(9):2559–2564',
+    year: 2011,
+    url: 'https://nutrition-evidence.com/article/161088/the-effect-of-abdominal-exercise-on-abdominal-fat',
+    primaryUrl: 'https://doi.org/10.1519/JSC.0b013e3181fb4a46',
+    check: 'primary',
+    note: '메타분석이 아니라 무작위 대조시험.',
+    claims: {
+      spot: {
+        text: '6주간 복근 운동만 했을 때 복부 피하지방이 줄지 않았다',
+        appliesTo: '좌식 생활 성인 24명, 6주 RCT',
+      },
+    },
+  },
+  {
+    id: 'ismail2012',
+    org: 'Obes Rev',
+    title: 'A systematic review and meta-analysis of the effect of aerobic vs. resistance exercise training on visceral fat, Obes Rev 13(1):68–91',
+    year: 2012,
+    url: 'https://ro.ecu.edu.au/ecuworks2012/325',
+    primaryUrl: 'https://doi.org/10.1111/j.1467-789X.2011.00931.x',
+    check: 'primary',
+    claims: {
+      visceral: {
+        text: '유산소 운동은 대조군보다 내장지방을 유의하게 줄였고, 근력운동은 유의한 효과가 없었다 (유산소 vs 근력 직접 비교는 유의하지 않음)',
+        appliesTo: '과체중·비만 성인 RCT 35개 메타분석',
+      },
+    },
+  },
+  {
+    id: 'barakat2020',
+    org: 'Strength Cond J',
+    title: 'Body Recomposition: Can Trained Individuals Build Muscle and Lose Fat at the Same Time? Strength Cond J 42(5):7–21',
+    year: 2020,
+    url: 'https://lida.sport-iat.de/ta/Record/4066252',
+    primaryUrl: 'https://doi.org/10.1519/SSC.0000000000000584',
+    check: 'primary',
+    note: '서술적 리뷰. 요지는 훈련된 사람에서도 리컴포지션이 관찰된다는 것.',
+    claims: {
+      recomp: { text: '근육 증가와 지방 감소가 동시에 일어나는 리컴포지션은 초보자뿐 아니라 훈련된 사람에서도 관찰된다' },
+    },
+  },
+  {
+    id: 'schoenfeld2017',
+    org: 'J Sports Sci',
+    title: 'Dose-response relationship between weekly resistance training volume and increases in muscle mass',
+    year: 2017,
+    url: 'https://doi.org/10.1080/02640414.2016.1210197',
+    check: 'primary',
+    claims: {
+      dose: {
+        text: '주당 세트가 1개 늘 때마다 근비대 +0.37%. 주 10세트 이상 구간이 가장 컸지만 통계적으로 유의하지는 않음',
+        values: { perSetPct: 0.37 },
+      },
+    },
+  },
+  {
+    id: 'pelland2025',
+    org: 'Sports Med',
+    title: 'The Resistance Training Dose-Response: Meta-Regressions Exploring the Effects of Weekly Volume and Frequency',
+    year: 2025,
+    url: 'https://doi.org/10.1007/s40279-025-02344-w',
+    check: 'primary',
+    claims: {
+      tiers: {
+        text: '근육별 주당 세트: 최소 유효량 4세트, 5~10세트가 효율 최고, 이후 효율 체감',
+        values: { minimum: 4, efficient: [5, 10] },
+        appliesTo: '67개 연구 메타회귀(평균 25세, 79% 남성)',
+      },
+      fractional: { text: '보조로 쓰인 근육은 0.5세트로 계산', values: { indirect: 0.5 } },
+    },
+  },
+  {
+    id: 'spiering2021',
+    org: 'J Strength Cond Res',
+    title: 'Maintaining Physical Performance: The Minimal Dose of Exercise Needed to Preserve Endurance and Strength Over Time',
+    year: 2021,
+    url: 'https://doi.org/10.1519/JSC.0000000000003964',
+    check: 'secondary',
+    note: '초록만 확인.',
+    claims: {
+      maintain: {
+        text: '젊은 성인은 강도를 유지하면 주 1회, 종목당 1세트로 근력·근육 크기를 최대 32주 유지',
+        appliesTo: '이미 훈련으로 키운 근육의 유지',
+      },
+    },
+  },
+  {
+    id: 'bickel2011',
+    org: 'Med Sci Sports Exerc',
+    title: 'Exercise Dosing to Retain Resistance Training Adaptations in Young and Older Adults',
+    year: 2011,
+    url: 'https://doi.org/10.1249/MSS.0b013e318207c15d',
+    check: 'primary',
+    claims: {
+      maintain: {
+        text: '16주 훈련 후 32주간 1/3~1/9 용량(주 1회)으로 젊은 성인의 근비대가 유지됨',
+        appliesTo: '하체 종목만, 20~35세',
+      },
+    },
+  },
+  {
+    id: 'cdcIntensity',
+    org: 'CDC',
+    title: 'Measuring Physical Activity Intensity',
+    year: 2026,
+    url: 'https://www.cdc.gov/physical-activity-basics/measuring/index.html',
+    check: 'primary',
+    note: '웹페이지. 연도는 확인일(2026-10-22).',
+    claims: {
+      talkTest: {
+        text: '대화 테스트: 말은 되지만 노래는 못 하면 중강도, 몇 단어 이상 말하기 힘들면 고강도',
+      },
+    },
+  },
+  {
+    id: 'buist2008',
+    org: 'Am J Sports Med',
+    title: 'No effect of a graded training program on the number of running-related injuries',
+    year: 2008,
+    url: 'https://doi.org/10.1177/0363546507307505',
+    check: 'secondary',
+    claims: {
+      tenPct: { text: '주 10% 증가 규칙 프로그램과 일반 프로그램의 부상률이 비슷했다 (20.8% vs 20.3%)', appliesTo: '초보 러너 532명 RCT' },
+    },
+  },
+  {
+    id: 'cheung2003',
+    org: 'Sports Med',
+    title: 'Delayed Onset Muscle Soreness: Treatment Strategies and Performance Factors',
+    year: 2003,
+    url: 'https://doi.org/10.2165/00007256-200333020-00005',
+    check: 'secondary',
+    claims: { reduce: { text: '심한 지연성 근육통이 있으면 1~2일 운동 강도·시간을 줄인다' } },
+  },
+  {
+    id: 'hotfiel2018',
+    org: 'Sportverletz Sportschaden',
+    title: 'Advances in Delayed-Onset Muscle Soreness (DOMS)',
+    year: 2018,
+    url: 'https://pubmed.ncbi.nlm.nih.gov/30537791/',
+    check: 'secondary',
+    claims: { peak: { text: '지연성 근육통은 운동 후 48~72시간에 가장 심하다' } },
+  },
+  {
+    id: 'nhsSprains',
+    org: 'NHS',
+    title: 'Sprains and strains',
+    year: 2026,
+    url: 'https://www.nhs.uk/conditions/sprains-and-strains/',
+    check: 'primary',
+    note: '웹페이지. 연도는 확인일(2026-10-22).',
+    claims: {
+      redFlags: {
+        text: '뚝 소리, 변형, 저림·감각 이상, 피부색 변화가 있으면 응급, 심하거나 점점 심해지는 통증·붓기, 걷기 어려움은 빠른 진료',
+      },
+    },
+  },
+  {
+    id: 'kim2016rhabdo',
+    org: 'J Sport Health Sci',
+    title: 'Exertional rhabdomyolysis: a review',
+    year: 2016,
+    url: 'https://doi.org/10.1016/j.jshs.2015.01.012',
+    check: 'primary',
+    claims: { darkUrine: { text: '운동 후 24~48시간에 근육통과 함께 어두운(콜라색) 소변이 보이면 진료가 필요하다 (횡문근융해증 의심)' } },
+  },
+
+  // ───────────── 영양 ─────────────
+  {
+    id: 'issnProtein2017',
+    org: 'ISSN',
+    title: 'Position Stand: Protein and Exercise, J Int Soc Sports Nutr 14:20',
+    year: 2017,
+    url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC5477153',
+    primaryUrl: 'https://doi.org/10.1186/s12970-017-0177-8',
+    check: 'primary',
+    claims: {
+      daily: { text: '운동하는 사람 대부분은 하루 1.4~2.0 g/kg이면 충분', values: { gPerKg: [1.4, 2.0] } },
+      perMeal: { text: '끼니당 0.25 g/kg 또는 20~40 g', values: { gPerKg: 0.25, g: [20, 40] } },
+      interval: { text: '하루에 고르게, 3~4시간 간격', values: { hours: [3, 4] } },
+      hypocaloric: { text: '저항운동 경험자의 감량기에는 2.3~3.1 g/kg(제지방량 기준으로 보임)이 필요할 수 있다', appliesTo: '저항운동 경험자' },
+      preSleep: { text: '자기 전 카제인 30~40 g', values: { g: [30, 40] } },
+    },
+  },
+  {
+    id: 'issnTiming2017',
+    org: 'ISSN',
+    title: 'Position Stand: Nutrient Timing, J Int Soc Sports Nutr 14:33',
+    year: 2017,
+    url: 'https://jissn.biomedcentral.com/articles/10.1186/s12970-017-0189-4',
+    check: 'primary',
+    claims: {
+      post: { text: '운동 직후~2시간 안의 양질 단백질 섭취가 근단백 합성을 크게 높인다', values: { hours: 2 } },
+      preMeal: { text: '운동 전 식사의 양과 시점에 따라 운동 후 단백질의 필요성이 달라진다' },
+    },
+  },
+  {
+    id: 'kdri2020',
+    org: '보건복지부·한국영양학회',
+    title: '2020 한국인 영양소 섭취기준',
+    year: 2020,
+    url: 'https://www.koreascience.or.kr/article/JAKO202210242857035.page',
+    primaryUrl: 'https://mohw.go.kr/board.es?act=view&bid=0027&list_no=362381&mid=a10503010100&nPage=268',
+    check: 'primary',
+    note: '요청서 링크는 단백질 편 논문. 비율은 복지부 보도자료(2020-12-23)로 확인.',
+    claims: {
+      amdr: {
+        text: '성인 에너지적정비율: 탄수화물 55~65%, 단백질 7~20%, 지방 15~30%',
+        values: { carbPct: [55, 65], proteinPct: [7, 20], fatPct: [15, 30] },
+      },
+      sodium: { text: '나트륨 만성질환위험감소섭취량 하루 2,300 mg', values: { mg: 2300 } },
+      eer: { text: '에너지필요추정량은 IOM(2005) 공식으로 계산' },
+    },
+  },
+  {
+    id: 'kdri2025',
+    org: '보건복지부·한국영양학회',
+    title: '2025 한국인 영양소 섭취기준',
+    year: 2025,
+    url: 'https://www.kns.or.kr',
+    check: 'unchecked',
+    note: '2025-12-31 발표. 아래 수치는 보도 기준이며 원문 대조 전. 결정 D4에 따라 원문 확인 후 적용.',
+    claims: {
+      amdr: {
+        text: '성인 에너지적정비율(보도 기준): 탄수화물 50~65%, 단백질 10~20%, 지방 15~30%',
+        values: { carbPct: [50, 65], proteinPct: [10, 20], fatPct: [15, 30] },
+      },
+    },
+  },
+  {
+    id: 'iom2005',
+    org: 'Institute of Medicine',
+    title: 'Dietary Reference Intakes for Energy, Carbohydrate, Fiber, Fat, Fatty Acids, Cholesterol, Protein, and Amino Acids',
+    year: 2005,
+    url: 'https://nkf.org.my/prevention/education-tools-resources/err-calculator/',
+    primaryUrl: 'https://doi.org/10.17226/10490',
+    check: 'secondary',
+    note: '공식·계수는 2차 자료(말레이시아 신장재단 계산기)로 확인. 원문 5장은 이미지라 직접 대조 못 함.',
+    claims: {
+      eerMale: {
+        text: '성인 남성 EER = 662 − 9.53×나이 + PA×(15.91×체중kg + 539.6×키m), PA 좌식 1.0 / 저활동 1.11 / 활동 1.25 / 매우 활동 1.48',
+      },
+      pal: { text: '신체활동수준(PAL) 구간: 좌식 1.0~1.4, 저활동 1.4~1.6, 활동 1.6~1.9, 매우 활동 1.9~2.5' },
+    },
+  },
+  {
+    id: 'nasem2023',
+    org: 'NASEM',
+    title: 'Dietary Reference Intakes for Energy (Table 5-16)',
+    year: 2023,
+    url: 'https://doi.org/10.17226/26818',
+    check: 'primary',
+    claims: {
+      eerMale: {
+        text: '19세 이상 남성 EER = 절편 − 10.83×나이 + b×키(cm) + c×체중(kg). 비활동 753.07/6.50/14.10, 저활동 581.47/8.30/14.94, 활동 1004.82/6.52/15.91, 매우 활동 −517.88/15.61/19.11',
+      },
+      pal: { text: '19세 이상 남성 PAL 구간: 비활동 1.0~1.53, 저활동 1.53~1.69, 활동 1.69~1.85, 매우 활동 1.85~2.5' },
+    },
+  },
+  {
+    id: 'ruizCastellano2021',
+    org: 'Nutrients',
+    title: 'Achieving an Optimal Fat Loss Phase in Resistance-Trained Athletes: A Narrative Review, Nutrients 13(9):3255',
+    year: 2021,
+    url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC8471721/',
+    check: 'primary',
+    claims: {
+      rate: {
+        text: '주당 체중의 0.5~1.0% 감량을 목표로 칼로리를 정하고, 낮은 쪽을 권장',
+        values: { pctPerWeek: [0.5, 1.0] },
+        appliesTo: '저항운동 선수',
+      },
+    },
+  },
+  {
+    id: 'ksso2022',
+    org: '대한비만학회',
+    title: '비만 진료지침 2022 (8판) — 진단 (Haam 등, J Obes Metab Syndr 32(2):121–129)',
+    year: 2022,
+    url: 'https://www.hanam.go.kr/sotong/contents.do?key=11840',
+    primaryUrl: 'https://doi.org/10.7570/jomes23031',
+    check: 'primary',
+    claims: {
+      bmi: { text: 'BMI 정상 18.5~22.9, 비만전단계 23~24.9, 비만 25 이상', values: { normal: [18.5, 22.9] } },
+      waist: { text: '남성 허리둘레 90 cm 이상이면 동반질환 위험 단계가 한 단계 올라간다', values: { maleCm: 90 } },
+      waistMethod: { text: '허리둘레는 가장 아래 갈비뼈와 골반뼈(장골능) 위 끝의 중간에서, 발을 25~30 cm 벌리고 서서 잰다' },
+      deficit: { text: '저열량 식사는 하루 500~1,000 kcal 감량 (비만 치료 기준)', values: { kcal: [500, 1000] } },
+    },
+  },
+  {
+    id: 'nhlbi1998',
+    org: 'NHLBI',
+    title: 'Clinical Guidelines on the Identification, Evaluation, and Treatment of Overweight and Obesity in Adults',
+    year: 1998,
+    url: 'https://www.nhlbi.nih.gov/files/docs/guidelines/ob_gdlns.pdf',
+    check: 'primary',
+    claims: {
+      lcd: { text: '남성 저열량식 선택지 하루 1,200~1,500 kcal (과체중·비만 대상)', values: { maleKcal: [1200, 1500] } },
+    },
+  },
+  {
+    id: 'iraki2019',
+    org: 'Sports',
+    title: 'Nutrition Recommendations for Bodybuilders in the Off-Season: A Narrative Review, Sports 7(7):154',
+    year: 2019,
+    url: 'https://doi.org/10.3390/sports7070154',
+    check: 'primary',
+    claims: {
+      bulk: {
+        text: '초·중급자 증량기: 유지 칼로리 +10~20%, 주당 체중의 0.25~0.5% 증가, 판단은 주 평균 체중으로',
+        values: { surplusPct: [10, 20], gainPctPerWeek: [0.25, 0.5] },
+      },
+    },
+  },
+  {
+    id: 'nice2022whtr',
+    org: 'NICE',
+    title: 'Overweight and obesity management (NG246) — waist-to-height ratio',
+    year: 2022,
+    url: 'https://www.nice.org.uk/guidance/ng246/chapter/Identifying-and-assessing-overweight-obesity-and-central-adiposity',
+    check: 'primary',
+    claims: {
+      whtr: { text: '허리/키 비율 0.4~0.49 건강, 0.5~0.59 위험 증가, 0.6 이상 높은 위험 (근육량 많은 성인 포함)', values: { healthyMax: 0.49 } },
+    },
+  },
+  {
+    id: 'browning2010',
+    org: 'Nutr Res Rev',
+    title: 'A systematic review of waist-to-height ratio as a screening tool',
+    year: 2010,
+    url: 'https://doi.org/10.1017/S0954422410000144',
+    check: 'secondary',
+    claims: { boundary: { text: '78개 연구의 가중 평균 경계값 0.5', values: { whtr: 0.5 } } },
+  },
+  {
+    id: 'turicchi2020',
+    org: 'PLoS ONE',
+    title: 'Weekly, seasonal and holiday body weight fluctuation patterns among individuals engaged in a European multi-centre behavioural weight loss maintenance intervention',
+    year: 2020,
+    url: 'https://doi.org/10.1371/journal.pone.0232152',
+    check: 'primary',
+    claims: {
+      weekly: {
+        text: '체중은 한 주 안에서 평균 약 0.35%(남성 0.41%) 오르내리고, 일·월요일에 높고 금요일에 낮다',
+        values: { pct: 0.35, malePct: 0.41 },
+        appliesTo: '1,421명',
+      },
+    },
+  },
+  {
+    id: 'steinberg2013',
+    org: 'Obesity',
+    title: 'The efficacy of a daily self-weighing weight loss intervention using smart scales and e-mail',
+    year: 2013,
+    url: 'https://doi.org/10.1002/oby.20396',
+    check: 'secondary',
+    claims: { daily: { text: '매일 체중을 잰 그룹이 6개월 후 더 많이 감량했다 (−6.55% vs −0.35%)', appliesTo: 'RCT 91명' } },
+  },
+  {
+    id: 'zheng2015',
+    org: 'Obesity',
+    title: 'Self-weighing in weight management: a systematic literature review',
+    year: 2015,
+    url: 'https://doi.org/10.1002/oby.20946',
+    check: 'secondary',
+    claims: { regular: { text: '규칙적인 체중 측정은 더 많은 감량과 관련 있고 심리적 부작용은 없었다' } },
+  },
+  {
+    id: 'hall2011',
+    org: 'Lancet',
+    title: 'Quantification of the effect of energy imbalance on bodyweight',
+    year: 2011,
+    url: 'https://doi.org/10.1016/S0140-6736(11)60812-X',
+    check: 'secondary',
+    claims: { dynamic: { text: '체중은 섭취 변화에 천천히 반응하며, 고정 환산(7,700 kcal = 1 kg)은 실제 감량을 과대평가한다' } },
+  },
+  {
+    id: 'rdaFoodDb',
+    org: '농촌진흥청',
+    title: '국가표준식품성분 DB 10개정판',
+    year: 2026,
+    url: 'https://www.nics.go.kr/food/',
+    check: 'primary',
+    note: '공공누리 제1유형(출처표시). 식품 영양성분 데이터 출처 (4단계에서 사용).',
+    claims: { license: { text: '출처를 표시하면 이용할 수 있다 (공공누리 제1유형)' } },
+  },
+
+  // ───────────── 음주·수면 ─────────────
+  {
+    id: 'lee2019alcohol',
+    org: '대한가정의학회지',
+    title: 'Korean Alcohol Guidelines for Moderate Drinking Based on Facial Flushing, Korean J Fam Med 40(4):204–211',
+    year: 2019,
+    url: 'https://www.medicaltimes.com/Main/view.html?ID=1128286',
+    primaryUrl: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC6669389',
+    check: 'primary',
+    note: '정부 공식 지침이 아니라 연구팀의 문헌 검토 제안.',
+    claims: {
+      drinkDef: { text: '1잔(표준잔) = 알코올 14 g', values: { grams: 14 } },
+      weekly: { text: '65세 이하 남성 주 8잔 이하', values: { drinks: 8 } },
+      perOccasion: { text: '65세 이하 남성 1회 3잔 이하', values: { drinks: 3 } },
+      flush: { text: '술 마시면 얼굴이 빨개지는 사람은 기준의 절반', values: { factor: 0.5 } },
+    },
+  },
+  {
+    id: 'kdcaHighRisk',
+    org: '질병관리청',
+    title: '국민건강영양조사 지표: 고위험음주율',
+    year: 2026,
+    url: 'https://chs.kdca.go.kr/cdhs/biz/pblcVis/details.do?ctgrSn=47',
+    check: 'primary',
+    note: '웹페이지. 연도는 확인일(2026-10-22).',
+    claims: { def: { text: '1회 평균 음주량이 남자 7잔 이상이며 주 2회 이상 마시는 경우' } },
+  },
+  {
+    id: 'parr2014',
+    org: 'PLoS ONE',
+    title: 'Alcohol Ingestion Impairs Maximal Post-Exercise Rates of Myofibrillar Protein Synthesis following a Single Bout of Concurrent Training, PLoS ONE 9(2):e88384',
+    year: 2014,
+    url: 'https://acuresearchbank.acu.edu.au/items/1dca291e-01d0-4f42-abf5-2850a5a7164f',
+    primaryUrl: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC3922864/',
+    check: 'primary',
+    claims: {
+      mps: {
+        text: '운동 후 고용량 음주 시 근단백 합성이 단백질만 먹었을 때보다 약 24%(알코올+단백질), 약 37%(알코올+탄수) 낮았다',
+        values: { withProteinPct: -24, withCarbPct: -37, doseGPerKg: 1.5 },
+        appliesTo: '활동적인 남성 8명, 체중 1 kg당 알코올 1.5 g (체중 70 kg이면 약 105 g ≈ 소주 2병 이상)',
+      },
+    },
+  },
+  {
+    id: 'fao2003',
+    org: 'FAO',
+    title: 'Food energy – methods of analysis and conversion factors (Food and Nutrition Paper 77)',
+    year: 2003,
+    url: 'https://www.fao.org/4/Y5022e/y5022e05.htm',
+    check: 'primary',
+    claims: { alcohol: { text: '알코올 1 g = 7 kcal (29 kJ)', values: { kcalPerG: 7 } } },
+  },
+  {
+    id: 'sojuKcal',
+    org: '코메디닷컴 (한국소비자원 2019 인용)',
+    title: '소주 1병 열량',
+    year: 2022,
+    url: 'https://kormedi.com/1377386/',
+    check: 'secondary',
+    claims: { bottle: { text: '소주 1병(360 mL) 397~408 kcal', values: { kcal: [397, 408] } } },
+  },
+  {
+    id: 'aasm2015',
+    org: 'AASM·SRS',
+    title: 'Recommended Amount of Sleep for a Healthy Adult (Joint Consensus Statement), SLEEP 38(6):843–844',
+    year: 2015,
+    url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC4434546/',
+    check: 'primary',
+    claims: { hours: { text: '성인은 규칙적으로 매일 밤 7시간 이상 자야 한다', values: { hours: 7 } } },
+  },
+  {
+    id: 'nedeltcheva2010',
+    org: 'Ann Intern Med',
+    title: 'Insufficient Sleep Undermines Dietary Efforts to Reduce Adiposity, Ann Intern Med 153(7):435–441',
+    year: 2010,
+    url: 'https://www.globalfamilydoctor.com/Resources/A-Ztopiclisting/JournalWatch/Insufficientsleepunderminesweightlossefforts.aspx',
+    primaryUrl: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC2951287/',
+    check: 'primary',
+    claims: {
+      deficit: {
+        text: '감량 중 잠자리 시간이 5.5시간이면 8.5시간보다 지방 감소가 55% 적고 제지방 감소가 60% 많았다',
+        values: { fatLossPct: -55, ffmLossPct: 60 },
+        appliesTo: '과체중 성인 10명, 14일씩 교차 시험',
+      },
+    },
+  },
+]
+
+export const EVIDENCE: Record<string, EvidenceSource> = Object.fromEntries(sources.map((s) => [s.id, s]))
+
+export function resolveRef(ref: string) {
+  const [sourceId, claimKey] = ref.split('#')
+  const source = EVIDENCE[sourceId]
+  const claim = source?.claims[claimKey]
+  return source && claim ? { source, claim } : null
+}

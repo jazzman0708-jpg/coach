@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+/* 색은 토큰으로만 쓴다. 다크 모드는 시스템 설정을 따른다. */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-card: var(--card);
+  --color-soft: var(--soft);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-bad: var(--bad);
+}
+
+:root {
+  --bg: #f4f6f8;
+  --card: #ffffff;
+  --soft: #eef1f5;
+  --ink: #111827;
+  --muted: #6b7280;
+  --line: #e2e6eb;
+  --accent: #2563eb;
+  --accent-ink: #ffffff;
+  --ok: #15803d;
+  --warn: #b45309;
+  --bad: #dc2626;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b0f14;
+    --card: #141a22;
+    --soft: #1c2430;
+    --ink: #e6edf3;
+    --muted: #8b98a5;
+    --line: #26303d;
+    --accent: #3b82f6;
+    --accent-ink: #ffffff;
+    --ok: #4ade80;
+    --warn: #fbbf24;
+    --bad: #f87171;
+    color-scheme: dark;
+  }
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', 'Noto Sans KR', sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+}
+
+button {
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+input,
+select,
+textarea {
+  font-size: 16px; /* iOS 확대 방지 */
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
