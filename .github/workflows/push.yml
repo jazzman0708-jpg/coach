@@ -1,0 +1,37 @@
+# 예약 알림: 매일 11:00 수면 기록, 월~토 14:30 운동 (한국 시간). GitHub 예약 실행은 몇 분~수십 분 늦을 수 있다.
+# 시각을 바꾸려면 아래 cron(UTC 기준, 한국 시간 - 9시간)과 KIND 조건을 같이 바꾼다.
+name: Push reminders
+
+on:
+  schedule:
+    - cron: '0 2 * * *'
+    - cron: '30 5 * * 1-6'
+  workflow_dispatch:
+    inputs:
+      kind:
+        description: 보낼 알림 (sleep 또는 workout)
+        required: true
+        default: sleep
+        type: choice
+        options: [sleep, workout]
+
+permissions:
+  contents: read
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: node scripts/send-push.mjs
+        env:
+          VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          PUSH_SUBSCRIPTION: ${{ secrets.PUSH_SUBSCRIPTION }}
+          APP_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+          KIND: ${{ github.event_name == 'workflow_dispatch' && inputs.kind || (github.event.schedule == '0 2 * * *' && 'sleep' || 'workout') }}

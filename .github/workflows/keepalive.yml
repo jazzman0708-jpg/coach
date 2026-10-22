@@ -1,0 +1,22 @@
+# 공개 저장소는 60일 동안 활동이 없으면 예약 실행이 자동으로 꺼진다.
+# 매달 1일 빈 커밋을 올려 알림 예약 실행이 계속 돌게 한다. [skip ci]라 배포는 다시 돌지 않는다.
+name: Keep schedules alive
+
+on:
+  schedule:
+    - cron: '0 3 1 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit --allow-empty -m "예약 실행 유지 [skip ci]"
+          git push

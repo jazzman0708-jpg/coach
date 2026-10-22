@@ -85,3 +85,12 @@ describe('레시피', () => {
     expect(findRecipe('우삼겹 두부김치')?.id).toBe('beef_tofu_kimchi')
   })
 })
+
+describe('웹 푸시', () => {
+  it('공개키를 65바이트 P-256 공개키로 바꾼다', async () => {
+    const { VAPID_PUBLIC_KEY, base64UrlToBytes } = await import('../lib/push')
+    const bytes = base64UrlToBytes(VAPID_PUBLIC_KEY)
+    expect(bytes.length).toBe(65)
+    expect(bytes[0]).toBe(4) // 압축하지 않은 EC 공개키
+  })
+})

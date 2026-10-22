@@ -30,7 +30,12 @@ export default defineConfig({
           { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
-      workbox: { globPatterns: ['**/*.{js,css,html,png,svg}'] },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,png,svg}'],
+        globIgnores: ['push-handler.js'],
+        // 웹 푸시 알림 표시·클릭 처리 (public/push-handler.js)
+        importScripts: ['push-handler.js'],
+      },
     }),
   ],
   test: {

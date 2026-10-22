@@ -10,6 +10,7 @@ import { updateSettings, useProgram, useSettings } from '../../db/hooks'
 import { remindersOf } from '../../engine/reminders'
 import type { Equipment, Schedule, Settings } from '../../engine/types'
 import { canVibrate, canWakeLock } from '../../lib/device'
+import { PushCard } from './PushCard'
 
 export const DISCLAIMER = '의학적 진단·치료를 대신하지 않습니다. 통증·질환이 있으면 전문의와 상담하세요.'
 
@@ -203,10 +204,12 @@ export default function SettingsPage() {
             <span className="flex-1">운동 시간 알림 (일정의 운동 시각 {settings.schedule.workout})</span>
           </label>
           <p className="text-muted">
-            시각이 지났는데 아직 기록·운동을 안 했으면, 앱을 열 때 '오늘' 화면 맨 위에 알림이 뜹니다. 앱이 닫혀 있을 때 휴대폰 알림으로 받으려면 따로 설정이 필요합니다.
+            시각이 지났는데 아직 기록·운동을 안 했으면, 앱을 열 때 '오늘' 화면 맨 위에 알림이 뜹니다. 앱이 닫혀 있을 때 받는 알림은 아래 '휴대폰 알림'에서 켭니다.
           </p>
         </div>
       </Card>
+
+      <PushCard />
 
       <DataCard />
 
