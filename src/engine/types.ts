@@ -342,6 +342,11 @@ export interface Settings {
   dayBoundaryHour: number
   sound: boolean
   vibration: boolean
+  /** 앱 안 알림. 없으면 기본값(수면 기록 11:00, 운동 시간 알림 켬) */
+  reminders?: {
+    sleepLog?: { enabled: boolean; time: string }
+    workout?: { enabled: boolean }
+  }
   /** 식탁 로우 전에 식탁 안정성을 확인했는지 */
   tableChecked?: boolean
   disclaimerAcceptedAt?: LocalDateTime

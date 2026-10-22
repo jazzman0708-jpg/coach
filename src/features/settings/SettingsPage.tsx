@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { BirthDateInput } from '../../components/BirthDateInput'
 import { BasisView } from '../../components/Why'
 import { Badge, Button, Card, CardTitle, Field, Loading, NumberInput, Page, Segmented, Sheet, Stepper, inputClass } from '../../components/ui'
 import { EVIDENCE } from '../../data/evidence'
@@ -6,6 +7,7 @@ import { EQUIPMENT_LABEL } from '../../data/exercises'
 import { db } from '../../db/db'
 import { exportAll, importAll, parseBackup, resetAll } from '../../db/backup'
 import { updateSettings, useProgram, useSettings } from '../../db/hooks'
+import { remindersOf } from '../../engine/reminders'
 import type { Equipment, Schedule, Settings } from '../../engine/types'
 import { canVibrate, canWakeLock } from '../../lib/device'
 
@@ -27,6 +29,7 @@ export default function SettingsPage() {
   const [evidenceOpen, setEvidenceOpen] = useState(false)
   if (!settings || !program) return <Loading />
   const set = (fn: (s: Settings) => void) => updateSettings(fn)
+  const reminders = remindersOf(settings)
 
   return (
     <Page title="설정">
@@ -37,17 +40,20 @@ export default function SettingsPage() {
       <Card>
         <CardTitle>신체 정보</CardTitle>
         <div className="space-y-3">
-          <Field label="출생연도">
-            <NumberInput value={settings.profile.birthYear} onChange={(v) => v && set((s) => void (s.profile.birthYear = v))} step={1} />
-          </Field>
-          <Field label="생년월일 (선택)" hint="나이 계산(에너지 필요량)에 씁니다. 비워두면 출생연도로 계산합니다.">
-            <input
-              type="date"
-              className={inputClass}
-              value={settings.profile.birthDate ?? ''}
-              onChange={(e) => set((s) => void (s.profile.birthDate = e.target.value || undefined))}
+          <div>
+            <span className="mb-1 block text-sm font-medium text-muted">생년월일</span>
+            <BirthDateInput
+              year={settings.profile.birthYear}
+              date={settings.profile.birthDate}
+              onChange={(v) =>
+                set((s) => {
+                  if (v.birthYear) s.profile.birthYear = v.birthYear
+                  s.profile.birthDate = v.birthDate
+                })
+              }
             />
-          </Field>
+            <span className="mt-1 block text-xs text-muted">나이 계산(에너지 필요량)에 씁니다. 월·일을 비워 두면 태어난 해로 계산합니다.</span>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <Field label="키 (cm)">
               <NumberInput value={settings.profile.heightCm} onChange={(v) => v && set((s) => void (s.profile.heightCm = v))} step={0.5} />
@@ -170,7 +176,35 @@ export default function SettingsPage() {
           <p className="text-muted">
             화면 꺼짐 방지: {canWakeLock() ? '지원됨 (운동 중 자동)' : '미지원 — 운동 중에는 기기의 자동 잠금을 꺼 두세요'}
           </p>
-          <p className="text-muted">정시 알림(끼니·운동 시간)은 5단계에서 추가합니다.</p>
+        </div>
+        <div className="mt-4 space-y-3 border-t border-line pt-4 text-sm">
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              className="h-5 w-5"
+              checked={reminders.sleepLog.enabled}
+              onChange={(e) => set((s) => void (s.reminders = { ...remindersOf(s), sleepLog: { ...remindersOf(s).sleepLog, enabled: e.target.checked } }))}
+            />
+            <span className="flex-1">수면 기록 알림</span>
+            <input
+              type="time"
+              className={`${inputClass} w-32`}
+              value={reminders.sleepLog.time}
+              onChange={(e) => set((s) => void (s.reminders = { ...remindersOf(s), sleepLog: { ...remindersOf(s).sleepLog, time: e.target.value } }))}
+            />
+          </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              className="h-5 w-5"
+              checked={reminders.workout.enabled}
+              onChange={(e) => set((s) => void (s.reminders = { ...remindersOf(s), workout: { enabled: e.target.checked } }))}
+            />
+            <span className="flex-1">운동 시간 알림 (일정의 운동 시각 {settings.schedule.workout})</span>
+          </label>
+          <p className="text-muted">
+            시각이 지났는데 아직 기록·운동을 안 했으면, 앱을 열 때 '오늘' 화면 맨 위에 알림이 뜹니다. 앱이 닫혀 있을 때 휴대폰 알림으로 받으려면 따로 설정이 필요합니다.
+          </p>
         </div>
       </Card>
 

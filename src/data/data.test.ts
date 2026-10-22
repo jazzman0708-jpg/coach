@@ -63,3 +63,14 @@ describe('종목 사다리', () => {
     }
   })
 })
+
+describe('숫자 입력', () => {
+  it('쉼표 소수점과 공백을 받아들이고, 숫자가 아니면 비운다', async () => {
+    const { parseDecimal } = await import('../components/ui')
+    expect(parseDecimal('68,5')).toBe(68.5)
+    expect(parseDecimal(' 175 ')).toBe(175)
+    expect(parseDecimal('68.')).toBe(68)
+    expect(parseDecimal('')).toBeUndefined()
+    expect(parseDecimal('abc')).toBeUndefined()
+  })
+})

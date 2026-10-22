@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect } from 'react'
+import { type ReactNode, useEffect, useState } from 'react'
 
 export function cx(...c: (string | false | null | undefined)[]) {
   return c.filter(Boolean).join(' ')
@@ -204,10 +204,21 @@ export function Field({ label, children, hint }: { label: string; children: Reac
 
 export const inputClass = 'w-full rounded-xl border border-line bg-soft px-3 py-2.5 text-ink outline-none focus:border-accent'
 
+/** '68,5'처럼 쉼표 소수점도 받는다. 숫자가 아니면 undefined */
+export function parseDecimal(text: string): number | undefined {
+  const t = text.replace(',', '.').replace(/\s/g, '')
+  if (t === '' || t === '.') return undefined
+  const n = Number(t)
+  return Number.isFinite(n) ? n : undefined
+}
+
+/**
+ * 숫자 입력. type="number"는 기기·키보드에 따라 쉼표 소수점이나 중간 입력('68.')을 빈 값으로 돌려줘서
+ * 입력한 값이 사라지는 문제가 있어, 글자로 받아 직접 숫자로 바꾼다.
+ */
 export function NumberInput({
   value,
   onChange,
-  step = 0.1,
   placeholder,
 }: {
   value: number | undefined
@@ -215,15 +226,23 @@ export function NumberInput({
   step?: number
   placeholder?: string
 }) {
+  const [text, setText] = useState(value === undefined ? '' : String(value))
+  useEffect(() => {
+    if (parseDecimal(text) !== value) setText(value === undefined ? '' : String(value))
+    // 바깥 값이 바뀔 때만 맞춘다 (입력 중인 '68.' 같은 글자는 유지)
+  }, [value])
   return (
     <input
-      type="number"
+      type="text"
       inputMode="decimal"
-      step={step}
+      autoComplete="off"
       placeholder={placeholder}
       className={inputClass}
-      value={value ?? ''}
-      onChange={(e) => onChange(e.target.value === '' ? undefined : Number(e.target.value))}
+      value={text}
+      onChange={(e) => {
+        setText(e.target.value)
+        onChange(parseDecimal(e.target.value))
+      }}
     />
   )
 }

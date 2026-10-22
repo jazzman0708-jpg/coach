@@ -12,6 +12,7 @@ import { sleepHours } from '../../engine/sleep'
 import type { LocalDate, PantryItem, Photo, Settings } from '../../engine/types'
 import { formatClock, hhmm, nowIso } from '../../lib/time'
 import { DrinkSheet, MonthlySheet, SleepSheet, WeightSheet, lastNight } from './forms'
+import { SessionEditSheet } from './SessionEditSheet'
 
 type Tab = 'body' | 'sleep' | 'drink' | 'monthly' | 'pantry' | 'workout'
 const TABS: { value: Tab; label: string }[] = [
@@ -319,7 +320,9 @@ function PantryTab() {
 function WorkoutTab() {
   const sessions = useLiveQuery(() => db.sessions.orderBy('date').reverse().limit(60).toArray(), []) ?? []
   const [openId, setOpenId] = useState<string | null>(null)
+  const [editId, setEditId] = useState<string | null>(null)
   const shown = sessions.filter((s) => s.status !== 'in_progress')
+  const editing = shown.find((s) => s.id === editId)
   return (
     <Card>
       <CardTitle>운동 기록</CardTitle>
@@ -355,14 +358,20 @@ function WorkoutTab() {
                     {s.cardio.laps.length ? ` · 랩 ${s.cardio.laps.length}개` : ''}
                   </p>
                 )}
-                <button type="button" className="text-xs text-muted underline" onClick={() => del(() => db.sessions.delete(s.id))}>
-                  이 기록 삭제
-                </button>
+                <div className="flex gap-2 pt-1">
+                  <Button size="sm" variant="primary" onClick={() => setEditId(s.id)}>
+                    수정
+                  </Button>
+                  <Button size="sm" variant="danger" onClick={() => del(() => db.sessions.delete(s.id))}>
+                    삭제
+                  </Button>
+                </div>
               </div>
             )}
           </li>
         ))}
       </ul>
+      {editing && <SessionEditSheet key={editing.id} session={editing} onClose={() => setEditId(null)} />}
     </Card>
   )
 }

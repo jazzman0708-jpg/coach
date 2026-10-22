@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Why } from '../../components/Why'
 import { Badge, Button, Card, CardTitle, Loading, Page, cx } from '../../components/ui'
 import { DRINK_BY_ID } from '../../data/drinks'
@@ -8,6 +9,7 @@ import { db, newId } from '../../db/db'
 import { useActiveSession, useProgram, useSettings, useToday } from '../../db/hooks'
 import { alcoholByDay, drinkingStatus } from '../../engine/alcohol'
 import { addDays, formatKoreanDate, timeOnLogicalDate, weekStart, weekdayOf } from '../../engine/day'
+import { type ReminderKind, dueReminders, remindersOf } from '../../engine/reminders'
 import { dayKind } from '../../engine/schedule'
 import { shortSleepWarning, sleepHours } from '../../engine/sleep'
 import type { LocalDate, MealLog, MealSlot, ProgramVersion, Settings } from '../../engine/types'
@@ -21,6 +23,33 @@ export default function TodayPage() {
   const today = useToday(settings)
   if (!settings || !program || !today) return <Loading />
   return <TodayView settings={settings} program={program} today={today} />
+}
+
+// '나중에'를 누른 알림은 그날 하루 다시 띄우지 않는다 (기기별 편의 설정이라 localStorage)
+const dismissKey = (date: LocalDate) => `coach.dismissed.${date}`
+function readDismissed(date: LocalDate): ReminderKind[] {
+  try {
+    return JSON.parse(localStorage.getItem(dismissKey(date)) ?? '[]')
+  } catch {
+    return []
+  }
+}
+
+function ReminderCard({ title, text, action, onAction, onLater }: { title: string; text: string; action: string; onAction: () => void; onLater: () => void }) {
+  return (
+    <Card className="border-accent bg-accent/10">
+      <p className="text-lg font-bold">🔔 {title}</p>
+      <p className="mt-1 text-sm">{text}</p>
+      <div className="mt-3 flex gap-2">
+        <Button variant="primary" onClick={onAction}>
+          {action}
+        </Button>
+        <Button variant="ghost" onClick={onLater}>
+          나중에
+        </Button>
+      </div>
+    </Card>
+  )
 }
 
 const MEAL_LABEL: Record<Exclude<MealSlot, 'extra'>, string> = {
@@ -60,6 +89,29 @@ function TodayView({ settings, program, today }: { settings: Settings; program: 
   const wd = weekdayOf(today)
   const sch = settings.schedule
   const at = (t: string) => timeOnLogicalDate(today, t, settings.dayBoundaryHour).getTime()
+
+  const navigate = useNavigate()
+  const [dismissed, setDismissed] = useState<ReminderKind[]>(() => readDismissed(today))
+  const dismiss = (k: ReminderKind) => {
+    const next = [...dismissed, k]
+    setDismissed(next)
+    try {
+      localStorage.setItem(dismissKey(today), JSON.stringify(next))
+    } catch {
+      // 저장 실패 시 이번 화면에서만 숨김
+    }
+  }
+  const due = dueReminders({
+    now: new Date(now),
+    today,
+    boundaryHour: settings.dayBoundaryHour,
+    reminders: remindersOf(settings),
+    workoutTime: sch.workout,
+    kind,
+    sleepLogged: !!night,
+    workoutDone: sessions.some((s) => s.date === today && s.status === 'done'),
+    workoutInProgress: active !== 'loading' && !!active,
+  }).filter((k) => !dismissed.includes(k))
 
   const setMeal = async (slot: MealSlot, st: MealLog['status']) => {
     const existing = meals.find((m) => m.slot === slot)
@@ -166,6 +218,25 @@ function TodayView({ settings, program, today }: { settings: Settings; program: 
         </div>
       }
     >
+      {due.includes('sleep') && (
+        <ReminderCard
+          title="수면 기록할 시간이에요"
+          text="어젯밤 잠든 시각과 일어난 시각을 기록하세요."
+          action="수면 기록하기"
+          onAction={() => setSheet('sleep')}
+          onLater={() => dismiss('sleep')}
+        />
+      )}
+      {due.includes('workout') && (
+        <ReminderCard
+          title="운동할 시간이에요"
+          text={kind === 'strength' ? '오늘은 근력 운동일입니다.' : '오늘은 유산소일입니다.'}
+          action="운동 시작하러 가기"
+          onAction={() => navigate('/workout')}
+          onLater={() => dismiss('workout')}
+        />
+      )}
+
       {sleepWarn && (
         <Card className="border-warn/50">
           <div className="flex items-start gap-2">

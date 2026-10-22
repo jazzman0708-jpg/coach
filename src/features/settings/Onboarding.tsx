@@ -1,32 +1,55 @@
 import { useRef, useState } from 'react'
+import { BirthDateInput } from '../../components/BirthDateInput'
 import { Button, Field, NumberInput, Stepper, inputClass } from '../../components/ui'
 import { importAll, parseBackup } from '../../db/backup'
 import { db, newId } from '../../db/db'
 import { logicalDate } from '../../engine/day'
+import type { LocalDate } from '../../engine/types'
 import { DISCLAIMER } from './SettingsPage'
 
 // 첫 실행 화면. 신체 정보·생활 시간·음주 목표는 코드(공개 저장소)에 두지 않고 여기서 입력받아 기기에만 저장한다.
 export function Onboarding() {
-  const [birthYear, setBirthYear] = useState<number>()
+  const [birth, setBirth] = useState<{ birthYear?: number; birthDate?: LocalDate }>({})
   const [height, setHeight] = useState<number>()
   const [weight, setWeight] = useState<number>()
   const [wake, setWake] = useState('07:00')
   const [bed, setBed] = useState('23:00')
   const [occasions, setOccasions] = useState(1)
   const [perOccasion, setPerOccasion] = useState(1)
-  const [agreed, setAgreed] = useState(false)
   const [msg, setMsg] = useState<string>()
+  const [errors, setErrors] = useState<string[]>([])
+  const [saving, setSaving] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  const valid =
-    agreed && !!birthYear && birthYear > 1920 && birthYear < 2015 && !!height && height > 120 && height < 230 && !!weight && weight > 30 && weight < 250
+  const check = () => {
+    const e: string[] = []
+    if (!birth.birthYear) e.push('태어난 해를 고르세요. 월·일까지 고르면 나이가 더 정확해집니다.')
+    if (!height || height < 120 || height > 230) e.push('키를 cm로 입력하세요 (예: 172).')
+    if (!weight || weight < 30 || weight > 250) e.push('현재 체중을 kg으로 입력하세요 (예: 70.5).')
+    return e
+  }
 
   const start = async () => {
+    const e = check()
+    setErrors(e)
+    if (e.length > 0) return
+    setSaving(true)
+    try {
+      await save()
+    } catch (err) {
+      setErrors([`저장하지 못했습니다: ${err instanceof Error ? err.message : String(err)}`])
+      setSaving(false)
+    }
+  }
+
+  const save = async () => {
     const now = new Date()
+    const b = birth
     await db.transaction('rw', [db.settings, db.programVersions, db.bodyLogs], async () => {
       const settings = await db.settings.get('singleton')
       await db.settings.where('id').equals('singleton').modify((s) => {
-        s.profile.birthYear = birthYear
+        s.profile.birthYear = b.birthYear
+        if (b.birthDate) s.profile.birthDate = b.birthDate
         s.profile.heightCm = height
         s.profile.startWeightKg = weight
         s.schedule.wake = wake
@@ -61,10 +84,12 @@ export function Onboarding() {
         <div className="rounded-2xl border border-warn/50 bg-warn/10 p-4 text-sm font-semibold text-warn">{DISCLAIMER}</div>
         <p className="text-sm text-muted">아래 정보는 이 기기 안에만 저장되고, 에너지 필요량 계산과 기록 비교에 쓰입니다.</p>
 
-        <div className="grid grid-cols-3 gap-3">
-          <Field label="출생연도">
-            <NumberInput value={birthYear} onChange={setBirthYear} step={1} placeholder="예: 1990" />
-          </Field>
+        <div>
+          <span className="mb-1 block text-sm font-medium text-muted">생년월일</span>
+          <BirthDateInput onChange={setBirth} />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
           <Field label="키 (cm)">
             <NumberInput value={height} onChange={setHeight} step={0.5} />
           </Field>
@@ -95,13 +120,16 @@ export function Onboarding() {
           <p className="text-xs text-muted">설정 화면에서 언제든 바꿀 수 있습니다.</p>
         </div>
 
-        <label className="flex items-start gap-2 text-sm">
-          <input type="checkbox" className="mt-0.5 h-5 w-5" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
-          위 안내를 읽었습니다.
-        </label>
+        {errors.length > 0 && (
+          <ul className="space-y-1 rounded-xl border border-bad/50 bg-bad/10 p-3 text-sm text-bad">
+            {errors.map((e) => (
+              <li key={e}>{e}</li>
+            ))}
+          </ul>
+        )}
 
-        <Button variant="primary" size="lg" className="w-full" onClick={start} disabled={!valid}>
-          시작
+        <Button variant="primary" size="lg" className="w-full" onClick={start} disabled={saving}>
+          {saving ? '저장 중…' : '위 안내를 확인했고, 시작합니다'}
         </Button>
 
         <div className="border-t border-line pt-4 text-center">
