@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { Why } from '../../components/Why'
 import { Badge, Button, Card, CardTitle, Loading, Page, cx } from '../../components/ui'
 import { DRINK_BY_ID } from '../../data/drinks'
+import { type Recipe, findRecipe } from '../../data/recipes'
 import { RULES } from '../../data/rules'
 import { db, newId } from '../../db/db'
 import { useActiveSession, useProgram, useSettings, useToday } from '../../db/hooks'
@@ -15,6 +16,7 @@ import { shortSleepWarning, sleepHours } from '../../engine/sleep'
 import type { LocalDate, MealLog, MealSlot, ProgramVersion, Settings } from '../../engine/types'
 import { hhmm, nowIso, useNow } from '../../lib/time'
 import { DrinkSheet, MealDifferentSheet, SleepSheet, WeightSheet, lastNight } from '../records/forms'
+import { RecipeSheet } from '../diet/DietPage'
 import { WorkoutStartCard } from '../workout/StartCard'
 
 export default function TodayPage() {
@@ -71,6 +73,7 @@ function TodayView({ settings, program, today }: { settings: Settings; program: 
 
   const [sheet, setSheet] = useState<null | 'weight' | 'sleep' | 'drink' | { meal: MealSlot; label: string }>(null)
   const close = () => setSheet(null)
+  const [recipe, setRecipe] = useState<Recipe | null>(null)
 
   const kind = dayKind(today, program)
   const status = drinkingStatus({
@@ -125,12 +128,20 @@ function TodayView({ settings, program, today }: { settings: Settings; program: 
     const plan = program.meals.find((m) => m.slot === slot)
     const menu = plan?.byWeekday?.[wd] ?? plan?.default ?? ''
     const log = meals.find((m) => m.slot === slot)
+    const r = findRecipe(menu)
     return {
       time,
       title: MEAL_LABEL[slot],
       detail: (
         <>
-          <p>{menu}</p>
+          <p>
+            {menu}
+            {r && (
+              <button type="button" className="ml-2 text-xs font-semibold text-accent underline" onClick={() => setRecipe(r)}>
+                레시피
+              </button>
+            )}
+          </p>
           {plan?.note && <p className="text-xs text-muted">{plan.note}</p>}
           {log?.status === 'different' && <p className="text-xs text-accent">먹은 것: {log.note}</p>}
         </>
@@ -301,6 +312,7 @@ function TodayView({ settings, program, today }: { settings: Settings; program: 
         </p>
       </Card>
 
+      {recipe && <RecipeSheet recipe={recipe} onClose={() => setRecipe(null)} />}
       {sheet === 'weight' && <WeightSheet open onClose={close} date={today} lastWeight={lastWeight} lastWaist={lastWaist} />}
       {sheet === 'sleep' && <SleepSheet open onClose={close} settings={settings} night={lastNight(today)} />}
       {sheet === 'drink' && <DrinkSheet open onClose={close} date={today} />}

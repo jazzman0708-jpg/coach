@@ -74,3 +74,14 @@ describe('숫자 입력', () => {
     expect(parseDecimal('abc')).toBeUndefined()
   })
 })
+
+describe('레시피', () => {
+  it('초기 프로그램의 메뉴마다 레시피가 연결된다 (밥·요거트 등 조리 없는 것 제외)', async () => {
+    const { findRecipe } = await import('./recipes')
+    const menus = INITIAL_PROGRAM.meals.flatMap((m) => [m.default, ...Object.values(m.byWeekday ?? {})])
+    const cooked = menus.filter((m) => !m.includes('그릭요거트') && !m.startsWith('잡곡밥'))
+    expect(cooked.filter((m) => !findRecipe(m))).toEqual([])
+    expect(findRecipe('돼지고기 두부 김치찌개')?.id).toBe('kimchi_stew')
+    expect(findRecipe('우삼겹 두부김치')?.id).toBe('beef_tofu_kimchi')
+  })
+})

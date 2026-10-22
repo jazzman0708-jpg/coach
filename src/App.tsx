@@ -1,5 +1,6 @@
 import { NavLink, Outlet, RouterProvider, createHashRouter } from 'react-router-dom'
 import { useActiveSession, useSettings } from './db/hooks'
+import DietPage from './features/diet/DietPage'
 import RecordsPage from './features/records/RecordsPage'
 import { Onboarding } from './features/settings/Onboarding'
 import SettingsPage from './features/settings/SettingsPage'
@@ -10,6 +11,7 @@ import WorkoutPage from './features/workout/WorkoutPage'
 const NAV = [
   { to: '/', label: '오늘', icon: '◎' },
   { to: '/workout', label: '운동', icon: '▲' },
+  { to: '/diet', label: '식단', icon: '◒' },
   { to: '/timer', label: '타이머', icon: '◷' },
   { to: '/records', label: '기록', icon: '≡' },
   { to: '/settings', label: '설정', icon: '⚙︎' },
@@ -51,6 +53,7 @@ const router = createHashRouter([
     children: [
       { path: '/', element: <TodayPage /> },
       { path: '/workout', element: <WorkoutPage /> },
+      { path: '/diet', element: <DietPage /> },
       { path: '/timer', element: <TimerPage /> },
       { path: '/records', element: <RecordsPage /> },
       { path: '/settings', element: <SettingsPage /> },
